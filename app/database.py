@@ -2,10 +2,10 @@
 Database configuration and session management.
 """
 
+from collections.abc import Generator
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker, Session
-from sqlalchemy.pool import StaticPool
-from typing import Generator
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from app.config import settings
 
@@ -27,7 +27,7 @@ Base = declarative_base()
 def get_db() -> Generator[Session, None, None]:
     """
     Dependency to get database session.
-    
+
     Yields:
         Session: Database session
     """
@@ -45,4 +45,4 @@ def create_tables():
 
 def drop_tables():
     """Drop all database tables."""
-    Base.metadata.drop_all(bind=engine) 
+    Base.metadata.drop_all(bind=engine)

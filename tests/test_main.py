@@ -2,7 +2,6 @@
 Tests for the main application.
 """
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -37,4 +36,4 @@ def test_static_files():
 def test_app_info():
     """Test that the app has correct configuration."""
     assert app.title == "Household Management App"
-    assert app.version == "0.1.0" 
+    assert app.version == "0.1.0"

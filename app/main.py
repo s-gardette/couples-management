@@ -3,12 +3,13 @@ Main FastAPI application entry point.
 """
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.core.routers import health
+from app.modules.auth.routers import auth_router, users_router
 
 # Create FastAPI application
 app = FastAPI(
@@ -35,6 +36,10 @@ templates = Jinja2Templates(directory="templates")
 # Include routers
 app.include_router(health.router, prefix="/health", tags=["health"])
 
+# Include auth module routers
+app.include_router(auth_router, prefix="/api")
+app.include_router(users_router, prefix="/api")
+
 # Root endpoint
 @app.get("/")
 async def root(request: Request):
@@ -49,4 +54,4 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         reload=settings.debug,
-    ) 
+    )
