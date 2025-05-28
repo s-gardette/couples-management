@@ -2,7 +2,7 @@
 Main FastAPI application entry point.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,9 +37,9 @@ app.include_router(health.router, prefix="/health", tags=["health"])
 
 # Root endpoint
 @app.get("/")
-async def root():
-    """Root endpoint."""
-    return {"message": "Household Management App", "version": settings.app_version}
+async def root(request: Request):
+    """Root endpoint - home page."""
+    return templates.TemplateResponse(request, "home.html")
 
 
 if __name__ == "__main__":

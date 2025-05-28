@@ -7,12 +7,18 @@ import os
 from typing import List, Optional
 from functools import lru_cache
 
-from pydantic import validator
+from pydantic import field_validator, ConfigDict
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
+    
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False
+    )
     
     # Application Configuration
     app_name: str = "Household Management App"
@@ -62,6 +68,7 @@ class Settings(BaseSettings):
     smtp_password: Optional[str] = None
     smtp_tls: bool = True
     smtp_ssl: bool = False
+    email_reset_token_expire_hours: int = 48
     
     # Redis Configuration
     redis_url: Optional[str] = None
@@ -90,38 +97,37 @@ class Settings(BaseSettings):
     household_invite_code_length: int = 8
     household_invite_code_expiry_days: int = 7
     
-    @validator("cors_origins", pre=True)
+    @field_validator("cors_origins", mode="before")
+    @classmethod
     def parse_cors_origins(cls, v):
         """Parse CORS origins from string or list."""
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",")]
         return v
     
-    @validator("cors_allow_methods", pre=True)
+    @field_validator("cors_allow_methods", mode="before")
+    @classmethod
     def parse_cors_methods(cls, v):
         """Parse CORS methods from string or list."""
         if isinstance(v, str):
             return [method.strip() for method in v.split(",")]
         return v
     
-    @validator("cors_allow_headers", pre=True)
+    @field_validator("cors_allow_headers", mode="before")
+    @classmethod
     def parse_cors_headers(cls, v):
         """Parse CORS headers from string or list."""
         if isinstance(v, str):
             return [header.strip() for header in v.split(",")]
         return v
     
-    @validator("allowed_upload_extensions", pre=True)
+    @field_validator("allowed_upload_extensions", mode="before")
+    @classmethod
     def parse_upload_extensions(cls, v):
         """Parse upload extensions from string or list."""
         if isinstance(v, str):
             return [ext.strip().lower() for ext in v.split(",")]
         return v
-    
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
 
 
 @lru_cache()
