@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: couples_management_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: couples_management
+      POSTGRES_USER: couples_user
+      POSTGRES_PASSWORD: couples_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - couples_network
+
+volumes:
+  postgres_data:
+
+networks:
+  couples_network:
+    driver: bridge 
