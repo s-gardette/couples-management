@@ -95,6 +95,17 @@ class Settings(BaseSettings):
     household_invite_code_length: int = 8
     household_invite_code_expiry_days: int = 7
 
+    # Default Login Configuration (Admin-Only System)
+    enable_default_login: bool = False
+    default_user_id: str | None = None
+    default_admin_email: str = "admin@gmail.com"
+    default_admin_username: str = "admin"
+    default_admin_password: str = "admin123"
+    create_default_admin: bool = True
+    require_authentication_for_all: bool = True
+    admin_contact_email: str = "admin@gmail.com"
+    admin_contact_message: str = "Please contact the administrator for access to this application."
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors_origins(cls, v):

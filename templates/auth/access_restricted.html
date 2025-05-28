@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Restricted - {{ app_name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gradient-to-br from-red-50 to-orange-50 min-h-screen flex items-center justify-center">
+    <div class="max-w-md w-full mx-4">
+        <!-- Access Restricted Card -->
+        <div class="bg-white rounded-2xl shadow-xl p-8 text-center">
+            <!-- Lock Icon -->
+            <div class="mb-6">
+                <div class="mx-auto w-20 h-20 bg-red-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-lock text-3xl text-red-600"></i>
+                </div>
+            </div>
+            
+            <!-- Title -->
+            <h1 class="text-2xl font-bold text-gray-900 mb-4">
+                Access Restricted
+            </h1>
+            
+            <!-- Message -->
+            <div class="text-gray-600 mb-6 space-y-3">
+                <p class="text-lg">
+                    This application requires administrator approval for access.
+                </p>
+                <p class="text-sm">
+                    {{ admin_contact_message }}
+                </p>
+            </div>
+            
+            <!-- Contact Information -->
+            <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                <h3 class="font-semibold text-gray-900 mb-2">
+                    <i class="fas fa-envelope mr-2 text-blue-600"></i>
+                    Contact Administrator
+                </h3>
+                <a href="mailto:{{ admin_contact_email }}" 
+                   class="text-blue-600 hover:text-blue-800 font-medium">
+                    {{ admin_contact_email }}
+                </a>
+            </div>
+            
+            <!-- Additional Information -->
+            <div class="text-xs text-gray-500 space-y-2">
+                <p>
+                    <i class="fas fa-shield-alt mr-1"></i>
+                    This is a private application with restricted access
+                </p>
+                <p>
+                    <i class="fas fa-clock mr-1"></i>
+                    Access requests are typically processed within 24 hours
+                </p>
+            </div>
+            
+            <!-- Footer -->
+            <div class="mt-8 pt-6 border-t border-gray-200">
+                <p class="text-xs text-gray-400">
+                    {{ app_name }} - Secure Access Required
+                </p>
+            </div>
+        </div>
+        
+        <!-- Additional Help -->
+        <div class="mt-6 text-center">
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <h4 class="font-medium text-gray-900 mb-2">
+                    <i class="fas fa-question-circle mr-2 text-blue-600"></i>
+                    Need Help?
+                </h4>
+                <p class="text-sm text-gray-600 mb-3">
+                    If you believe you should have access to this application, please contact the administrator with the following information:
+                </p>
+                <ul class="text-xs text-gray-500 space-y-1">
+                    <li>• Your name and role</li>
+                    <li>• Reason for access request</li>
+                    <li>• Contact information</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Background Pattern -->
+    <div class="fixed inset-0 -z-10 overflow-hidden">
+        <div class="absolute -top-40 -right-32 w-80 h-80 bg-red-200 rounded-full opacity-20 blur-3xl"></div>
+        <div class="absolute -bottom-40 -left-32 w-80 h-80 bg-orange-200 rounded-full opacity-20 blur-3xl"></div>
+    </div>
+</body>
+</html> 

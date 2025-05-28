@@ -15,7 +15,7 @@ from app.modules.auth.models.password_history import PasswordHistory
 from app.modules.auth.models.password_reset import PasswordResetToken
 from app.modules.auth.models.user import User
 from app.modules.auth.models.user_session import UserSession
-from app.modules.auth.schemas.user import UserCreate, UserUpdate
+from app.modules.auth.schemas.user import UserCreate, UserUpdate, UserResponse
 from app.modules.auth.utils.jwt import blacklist_token, create_user_tokens
 from app.modules.auth.utils.password import (
     check_password_history,
@@ -44,7 +44,9 @@ class AuthService(BaseService[User, UserCreate, UserUpdate]):
         username: str,
         password: str,
         first_name: str | None = None,
-        last_name: str | None = None
+        last_name: str | None = None,
+        created_by_admin: bool = False,
+        admin_id: str | None = None
     ) -> tuple[bool, str, User | None]:
         """
         Register a new user.
@@ -55,6 +57,8 @@ class AuthService(BaseService[User, UserCreate, UserUpdate]):
             password: Plain text password
             first_name: Optional first name
             last_name: Optional last name
+            created_by_admin: Whether this user is being created by an admin
+            admin_id: ID of the admin creating this user
 
         Returns:
             Tuple of (success, message, user_object)
@@ -93,6 +97,10 @@ class AuthService(BaseService[User, UserCreate, UserUpdate]):
                 email_verified=False,
                 is_active=True
             )
+            
+            # Set admin-specific fields if created by admin
+            if created_by_admin and admin_id:
+                user.set_created_by_admin(admin_id)
 
             self.db.add(user)
             self.db.flush()  # Get the user ID
@@ -171,6 +179,9 @@ class AuthService(BaseService[User, UserCreate, UserUpdate]):
                 username=user.username,
                 email_verified=user.email_verified
             )
+
+            # Add user information to token data for the response
+            token_data["user"] = UserResponse.model_validate(user).model_dump()
 
             # Create user session
             session = UserSession(

@@ -11,6 +11,9 @@
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     
+    <!-- HTMX JSON Extension -->
+    <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/json-enc.js"></script>
+    
     <!-- Alpine.js -->
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
@@ -118,6 +121,69 @@
 
     <!-- Custom JavaScript -->
     <script>
+        // Global Authentication utilities (same as base.html)
+        window.AuthUtils = {
+            // Store tokens in localStorage
+            storeTokens: function(tokenData, rememberMe = false) {
+                const storage = rememberMe ? localStorage : sessionStorage;
+                storage.setItem('access_token', tokenData.access_token);
+                storage.setItem('refresh_token', tokenData.refresh_token);
+                storage.setItem('token_type', tokenData.token_type);
+                storage.setItem('expires_in', tokenData.expires_in);
+                storage.setItem('user_data', JSON.stringify(tokenData.user));
+                
+                // Store expiration time
+                const expiresAt = new Date(Date.now() + (tokenData.expires_in * 1000));
+                storage.setItem('token_expires_at', expiresAt.toISOString());
+            },
+            
+            // Get stored access token
+            getAccessToken: function() {
+                return localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+            },
+            
+            // Get stored user data
+            getUserData: function() {
+                const userData = localStorage.getItem('user_data') || sessionStorage.getItem('user_data');
+                return userData ? JSON.parse(userData) : null;
+            },
+            
+            // Check if user is authenticated
+            isAuthenticated: function() {
+                const token = this.getAccessToken();
+                if (!token) return false;
+                
+                // Check if token is expired
+                const expiresAt = localStorage.getItem('token_expires_at') || sessionStorage.getItem('token_expires_at');
+                if (expiresAt && new Date() > new Date(expiresAt)) {
+                    this.clearTokens();
+                    return false;
+                }
+                
+                return true;
+            },
+            
+            // Clear all stored tokens
+            clearTokens: function() {
+                ['access_token', 'refresh_token', 'token_type', 'expires_in', 'user_data', 'token_expires_at'].forEach(key => {
+                    localStorage.removeItem(key);
+                    sessionStorage.removeItem(key);
+                });
+            },
+            
+            // Logout user
+            logout: function() {
+                this.clearTokens();
+                window.location.href = '/login';
+            },
+            
+            // Get redirect URL from query params or default to home
+            getRedirectUrl: function() {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get('redirect') || '/';
+            }
+        };
+
         // Show loading overlay on form submission
         document.addEventListener('htmx:beforeRequest', function(event) {
             document.getElementById('loading-overlay').classList.remove('hidden');

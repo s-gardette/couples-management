@@ -401,3 +401,108 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
         except Exception as e:
             self.db.rollback()
             return False, f"User deletion failed: {str(e)}"
+
+    async def get_by_email(self, email: str) -> User | None:
+        """Get user by email address."""
+        return self.db.query(User).filter(User.email == email.lower()).first()
+
+    async def get_by_username(self, username: str) -> User | None:
+        """Get user by username."""
+        return self.db.query(User).filter(User.username == username.lower()).first()
+
+    async def list_users_with_filters(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        search: str | None = None,
+        **filters
+    ) -> tuple[list[User], int]:
+        """
+        List users with filtering and pagination.
+        
+        Args:
+            skip: Number of users to skip
+            limit: Maximum number of users to return
+            search: Search term for email/username
+            **filters: Additional filters (role, is_active, etc.)
+            
+        Returns:
+            Tuple of (users_list, total_count)
+        """
+        query = self.db.query(User)
+        
+        # Apply search filter
+        if search:
+            search_term = f"%{search.lower()}%"
+            query = query.filter(
+                or_(
+                    User.email.ilike(search_term),
+                    User.username.ilike(search_term),
+                    User.first_name.ilike(search_term),
+                    User.last_name.ilike(search_term)
+                )
+            )
+        
+        # Apply additional filters
+        for key, value in filters.items():
+            if hasattr(User, key) and value is not None:
+                query = query.filter(getattr(User, key) == value)
+        
+        # Get total count
+        total = query.count()
+        
+        # Apply pagination
+        users = query.offset(skip).limit(limit).all()
+        
+        return users, total
+
+    async def get_user_statistics(self) -> dict:
+        """
+        Get user statistics for admin dashboard.
+        
+        Returns:
+            Dictionary with user statistics
+        """
+        from sqlalchemy import func
+        from datetime import date, timedelta
+        
+        total_users = self.db.query(User).count()
+        active_users = self.db.query(User).filter(User.is_active == True).count()
+        inactive_users = total_users - active_users
+        
+        admin_users = self.db.query(User).filter(User.role == "admin").count()
+        regular_users = total_users - admin_users
+        
+        verified_users = self.db.query(User).filter(User.email_verified == True).count()
+        unverified_users = total_users - verified_users
+        
+        # Users created today
+        today = date.today()
+        users_created_today = self.db.query(User).filter(
+            func.date(User.created_at) == today
+        ).count()
+        
+        # Users created this week
+        week_ago = today - timedelta(days=7)
+        users_created_this_week = self.db.query(User).filter(
+            User.created_at >= week_ago
+        ).count()
+        
+        # Users created this month
+        month_ago = today - timedelta(days=30)
+        users_created_this_month = self.db.query(User).filter(
+            User.created_at >= month_ago
+        ).count()
+        
+        return {
+            "total_users": total_users,
+            "active_users": active_users,
+            "inactive_users": inactive_users,
+            "admin_users": admin_users,
+            "regular_users": regular_users,
+            "verified_users": verified_users,
+            "unverified_users": unverified_users,
+            "users_created_today": users_created_today,
+            "users_created_this_week": users_created_this_week,
+            "users_created_this_month": users_created_this_month
+        }

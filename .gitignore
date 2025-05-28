@@ -5,6 +5,8 @@
 # uv 
 .venv/
 
+# ruff
+.ruff_cache/
 
 #Annoying files
 *.mdc

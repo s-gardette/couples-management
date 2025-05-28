@@ -5,15 +5,17 @@
 {% block page_title %}Sign in to your account{% endblock %}
 
 {% block page_subtitle %}
-Or <a href="{{ url_for('register') }}" class="font-medium text-indigo-600 hover:text-indigo-500">create a new account</a>
+Contact the administrator for access to this application
 {% endblock %}
 
 {% block content %}
 <form id="login-form" 
-      hx-post="{{ url_for('login') }}" 
+      hx-post="/api/auth/login" 
       hx-target="#login-form" 
-      hx-swap="outerHTML"
+      hx-swap="none"
       hx-indicator="#login-loading"
+      hx-ext="json-enc"
+      hx-headers='{"Content-Type": "application/json"}'
       class="space-y-6"
       x-data="loginForm()">
     
@@ -30,10 +32,6 @@ Or <a href="{{ url_for('register') }}" class="font-medium text-indigo-600 hover:
                    required 
                    class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                    placeholder="Enter your email or username"
-                   hx-post="{{ url_for('validate_login_field') }}"
-                   hx-trigger="blur"
-                   hx-target="#email-validation"
-                   hx-include="[name='email_or_username']"
                    x-model="emailOrUsername"
                    :class="{'border-red-300 focus:border-red-500 focus:ring-red-500': emailError, 'border-green-300 focus:border-green-500 focus:ring-green-500': emailValid}">
             <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -92,7 +90,7 @@ Or <a href="{{ url_for('register') }}" class="font-medium text-indigo-600 hover:
         </div>
 
         <div class="text-sm">
-            <a href="{{ url_for('forgot_password') }}" 
+            <a href="/api/auth/forgot-password" 
                class="font-medium text-indigo-600 hover:text-indigo-500">
                 Forgot your password?
             </a>
@@ -122,46 +120,14 @@ Or <a href="{{ url_for('register') }}" class="font-medium text-indigo-600 hover:
             </span>
         </button>
     </div>
-
-    <!-- Social login section (placeholder) -->
-    <div class="mt-6">
-        <div class="relative">
-            <div class="absolute inset-0 flex items-center">
-                <div class="w-full border-t border-gray-300" />
-            </div>
-            <div class="relative flex justify-center text-sm">
-                <span class="px-2 bg-white text-gray-500">Or continue with</span>
-            </div>
-        </div>
-
-        <div class="mt-6 grid grid-cols-2 gap-3">
-            <button type="button" 
-                    class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled>
-                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M20 10c0-5.523-4.477-10-10-10S0 4.477 0 10c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V10h2.54V7.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V10h2.773l-.443 2.89h-2.33v6.988C16.343 19.128 20 14.991 20 10z" clip-rule="evenodd" />
-                </svg>
-                <span class="ml-2">Facebook</span>
-            </button>
-
-            <button type="button" 
-                    class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled>
-                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M15.545 6.558a9.42 9.42 0 0 1 .139 1.626c0 2.434-.87 4.492-2.384 5.885h.002C11.978 15.292 10.158 16 8 16A8 8 0 1 1 8 0a7.689 7.689 0 0 1 5.352 2.082l-2.284 2.284A4.347 4.347 0 0 0 8 3.166c-2.087 0-3.86 1.408-4.492 3.304a4.792 4.792 0 0 0 0 3.063h.003c.635 1.893 2.405 3.301 4.492 3.301 1.078 0 2.004-.276 2.722-.764h-.003a3.702 3.702 0 0 0 1.599-2.431H8v-3.08h7.545z" />
-                </svg>
-                <span class="ml-2">Google</span>
-            </button>
-        </div>
-    </div>
 </form>
 {% endblock %}
 
 {% block footer_links %}
 <p class="text-center text-sm text-gray-600">
-    Don't have an account?
-    <a href="{{ url_for('register') }}" class="font-medium text-indigo-600 hover:text-indigo-500">
-        Sign up now
+    Need access to this application?
+    <a href="mailto:{{ admin_contact_email }}" class="font-medium text-indigo-600 hover:text-indigo-500">
+        Contact Administrator
     </a>
 </p>
 {% endblock %}
@@ -195,18 +161,89 @@ Or <a href="{{ url_for('register') }}" class="font-medium text-indigo-600 hover:
         }
     }
 
-    // Handle validation responses
+    // Handle login success/failure
     document.addEventListener('htmx:afterRequest', function(event) {
-        if (event.detail.target.id === 'email-validation') {
-            const response = event.detail.xhr.responseText;
-            const form = Alpine.$data(document.getElementById('login-form'));
-            
-            if (response.includes('error')) {
-                form.emailError = true;
-                form.emailValid = false;
-            } else if (response.includes('success')) {
-                form.emailError = false;
-                form.emailValid = true;
+        if (event.detail.xhr.status === 200 && event.detail.target.id === 'login-form') {
+            try {
+                // Parse the response to get token data
+                const response = JSON.parse(event.detail.xhr.responseText);
+                
+                // Get remember me checkbox value
+                const rememberMe = document.getElementById('remember_me').checked;
+                
+                // Store tokens in localStorage/sessionStorage for API calls
+                if (window.AuthUtils) {
+                    AuthUtils.storeTokens(response, rememberMe);
+                }
+                
+                // Show success message briefly (without token info)
+                const successDiv = document.createElement('div');
+                successDiv.className = 'bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4';
+                successDiv.innerHTML = `
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium">Welcome back!</p>
+                            <p class="text-xs text-green-600 mt-1">Taking you to your dashboard...</p>
+                        </div>
+                    </div>
+                `;
+                
+                // Insert success message
+                const form = document.getElementById('login-form');
+                if (form) {
+                    form.insertBefore(successDiv, form.firstChild);
+                }
+                
+                // Redirect after a brief moment to show the welcome message
+                setTimeout(() => {
+                    const redirectUrl = window.AuthUtils ? AuthUtils.getRedirectUrl() : '/';
+                    window.location.href = redirectUrl;
+                }, 800); // Brief delay to show the welcome message
+                
+            } catch (error) {
+                console.error('Error processing login response:', error);
+                // Fallback: redirect anyway
+                const redirectUrl = window.AuthUtils ? AuthUtils.getRedirectUrl() : '/';
+                window.location.href = redirectUrl;
+            }
+        } else if (event.detail.xhr.status >= 400 && event.detail.target.id === 'login-form') {
+            // Login failed - show error message
+            try {
+                const response = JSON.parse(event.detail.xhr.responseText);
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4';
+                errorDiv.innerHTML = `
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm">${response.detail || 'Login failed. Please try again.'}</p>
+                        </div>
+                    </div>
+                `;
+                
+                // Insert error message at the top of the form
+                const form = document.getElementById('login-form');
+                if (form) {
+                    form.insertBefore(errorDiv, form.firstChild);
+                }
+                
+                // Remove error message after 5 seconds
+                setTimeout(() => {
+                    if (errorDiv.parentNode) {
+                        errorDiv.parentNode.removeChild(errorDiv);
+                    }
+                }, 5000);
+            } catch (error) {
+                console.error('Error processing login error response:', error);
             }
         }
     });

@@ -2,7 +2,7 @@
 Authentication API endpoints.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Response
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -32,53 +32,25 @@ from app.modules.auth.utils.password import validate_password_strength_detailed
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
-async def register(
-    user_data: RegisterRequest,
-    request: Request,
-    db: Session = Depends(get_db)
-):
-    """
-    Register a new user account.
-
-    Creates a new user account with email verification required.
-    """
-    auth_service = AuthService(db)
-
-    # Get client info for session tracking
-    request.headers.get("user-agent")
-
-    success, message, user = await auth_service.register_user(
-        email=user_data.email,
-        username=user_data.username,
-        password=user_data.password,
-        first_name=user_data.first_name,
-        last_name=user_data.last_name
-    )
-
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=message
-        )
-
-    return RegisterResponse(
-        message=message,
-        user_id=str(user.id) if user else None,
-        email_verification_required=True
-    )
+# REMOVED: Public registration endpoint - users can only be created by admins
+# @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+# async def register(...):
+#     """Public registration is disabled. Users must be created by administrators."""
+#     pass
 
 
 @router.post("/login", response_model=LoginResponse)
 async def login(
     login_data: LoginRequest,
     request: Request,
+    response: Response,
     db: Session = Depends(get_db)
 ):
     """
     Authenticate user and return access tokens.
 
     Validates credentials and returns JWT tokens for API access.
+    Also sets secure cookies for browser-based navigation.
     """
     auth_service = AuthService(db)
 
@@ -100,6 +72,25 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"}
         )
 
+    # Set secure HTTP-only cookies for browser navigation
+    response.set_cookie(
+        key="access_token",
+        value=token_data["access_token"],
+        max_age=token_data["expires_in"],
+        httponly=True,
+        secure=False,  # Set to True in production with HTTPS
+        samesite="lax"  # Protect against CSRF while allowing normal navigation
+    )
+    
+    response.set_cookie(
+        key="refresh_token", 
+        value=token_data["refresh_token"],
+        max_age=token_data["expires_in"] * 24,  # Refresh token lasts longer
+        httponly=True,
+        secure=False,  # Set to True in production with HTTPS
+        samesite="lax"
+    )
+
     return LoginResponse(
         access_token=token_data["access_token"],
         refresh_token=token_data["refresh_token"],
@@ -114,12 +105,14 @@ async def logout(
     logout_data: LogoutRequest,
     current_user: User = Depends(get_current_user),
     request: Request = None,
+    response: Response = None,
     db: Session = Depends(get_db)
 ):
     """
     Logout user and invalidate tokens.
 
     Blacklists the current access token and optionally deactivates session.
+    Also clears authentication cookies.
     """
     auth_service = AuthService(db)
 
@@ -144,6 +137,11 @@ async def logout(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=message
         )
+
+    # Clear authentication cookies
+    if response:
+        response.delete_cookie(key="access_token", samesite="lax")
+        response.delete_cookie(key="refresh_token", samesite="lax")
 
     return AuthResponse(
         success=True,
