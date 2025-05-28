@@ -1,0 +1,403 @@
+{% extends "base/layouts/auth.html" %}
+
+{% block title %}Create Account{% endblock %}
+
+{% block page_title %}Create your account{% endblock %}
+
+{% block page_subtitle %}
+Or <a href="{{ url_for('login') }}" class="font-medium text-indigo-600 hover:text-indigo-500">sign in to your existing account</a>
+{% endblock %}
+
+{% block content %}
+<form id="register-form" 
+      hx-post="{{ url_for('register') }}" 
+      hx-target="#register-form" 
+      hx-swap="outerHTML"
+      hx-indicator="#register-loading"
+      class="space-y-6"
+      x-data="registerForm()">
+    
+    <!-- Progress indicator -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between text-xs text-gray-500 mb-2">
+            <span :class="{'text-indigo-600 font-medium': step >= 1}">Personal Info</span>
+            <span :class="{'text-indigo-600 font-medium': step >= 2}">Account Details</span>
+            <span :class="{'text-indigo-600 font-medium': step >= 3}">Verification</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="bg-indigo-600 h-2 rounded-full transition-all duration-300" 
+                 :style="`width: ${(step / 3) * 100}%`"></div>
+        </div>
+    </div>
+
+    <!-- Step 1: Personal Information -->
+    <div x-show="step === 1" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform translate-x-4" x-transition:enter-end="opacity-100 transform translate-x-0">
+        <div class="space-y-4">
+            <!-- First Name -->
+            <div>
+                <label for="first_name" class="block text-sm font-medium text-gray-700">
+                    First name
+                </label>
+                <div class="mt-1">
+                    <input id="first_name" 
+                           name="first_name" 
+                           type="text" 
+                           autocomplete="given-name" 
+                           class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                           placeholder="Enter your first name"
+                           x-model="firstName">
+                </div>
+            </div>
+
+            <!-- Last Name -->
+            <div>
+                <label for="last_name" class="block text-sm font-medium text-gray-700">
+                    Last name
+                </label>
+                <div class="mt-1">
+                    <input id="last_name" 
+                           name="last_name" 
+                           type="text" 
+                           autocomplete="family-name" 
+                           class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                           placeholder="Enter your last name"
+                           x-model="lastName">
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6">
+            <button type="button" 
+                    @click="nextStep()"
+                    :disabled="!canProceedStep1"
+                    class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                Continue
+            </button>
+        </div>
+    </div>
+
+    <!-- Step 2: Account Details -->
+    <div x-show="step === 2" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform translate-x-4" x-transition:enter-end="opacity-100 transform translate-x-0">
+        <div class="space-y-4">
+            <!-- Email -->
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700">
+                    Email address *
+                </label>
+                <div class="mt-1 relative">
+                    <input id="email" 
+                           name="email" 
+                           type="email" 
+                           autocomplete="email" 
+                           required 
+                           class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                           placeholder="Enter your email address"
+                           hx-post="{{ url_for('check_email_availability') }}"
+                           hx-trigger="blur"
+                           hx-target="#email-validation"
+                           hx-include="[name='email']"
+                           x-model="email"
+                           :class="{'border-red-300 focus:border-red-500 focus:ring-red-500': emailError, 'border-green-300 focus:border-green-500 focus:ring-green-500': emailValid}">
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <svg x-show="emailValid" class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                        <svg x-show="emailError" class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                </div>
+                <div id="email-validation" class="mt-1"></div>
+            </div>
+
+            <!-- Username -->
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-700">
+                    Username *
+                </label>
+                <div class="mt-1 relative">
+                    <input id="username" 
+                           name="username" 
+                           type="text" 
+                           autocomplete="username" 
+                           required 
+                           class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                           placeholder="Choose a username"
+                           hx-post="{{ url_for('check_username_availability') }}"
+                           hx-trigger="blur"
+                           hx-target="#username-validation"
+                           hx-include="[name='username']"
+                           x-model="username"
+                           :class="{'border-red-300 focus:border-red-500 focus:ring-red-500': usernameError, 'border-green-300 focus:border-green-500 focus:ring-green-500': usernameValid}">
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <svg x-show="usernameValid" class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                        <svg x-show="usernameError" class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                </div>
+                <div id="username-validation" class="mt-1"></div>
+            </div>
+
+            <!-- Password -->
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700">
+                    Password *
+                </label>
+                <div class="mt-1 relative">
+                    <input id="password" 
+                           name="password" 
+                           :type="showPassword ? 'text' : 'password'" 
+                           autocomplete="new-password" 
+                           required 
+                           class="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                           placeholder="Create a strong password"
+                           hx-post="{{ url_for('check_password_strength') }}"
+                           hx-trigger="input changed delay:500ms"
+                           hx-target="#password-strength"
+                           hx-include="[name='password']"
+                           x-model="password">
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                        <button type="button" 
+                                class="text-gray-400 hover:text-gray-500 focus:outline-none focus:text-gray-500"
+                                @click="showPassword = !showPassword">
+                            <svg x-show="!showPassword" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                            <svg x-show="showPassword" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div id="password-strength" class="mt-2"></div>
+            </div>
+
+            <!-- Confirm Password -->
+            <div>
+                <label for="confirm_password" class="block text-sm font-medium text-gray-700">
+                    Confirm password *
+                </label>
+                <div class="mt-1 relative">
+                    <input id="confirm_password" 
+                           name="confirm_password" 
+                           :type="showConfirmPassword ? 'text' : 'password'" 
+                           autocomplete="new-password" 
+                           required 
+                           class="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                           placeholder="Confirm your password"
+                           x-model="confirmPassword"
+                           :class="{'border-red-300 focus:border-red-500 focus:ring-red-500': passwordMismatch, 'border-green-300 focus:border-green-500 focus:ring-green-500': passwordMatch}">
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                        <button type="button" 
+                                class="text-gray-400 hover:text-gray-500 focus:outline-none focus:text-gray-500"
+                                @click="showConfirmPassword = !showConfirmPassword">
+                            <svg x-show="!showConfirmPassword" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                            <svg x-show="showConfirmPassword" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div x-show="passwordMismatch" class="mt-1 text-sm text-red-600">
+                    Passwords do not match
+                </div>
+                <div x-show="passwordMatch && confirmPassword.length > 0" class="mt-1 text-sm text-green-600">
+                    Passwords match
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 flex space-x-3">
+            <button type="button" 
+                    @click="prevStep()"
+                    class="flex-1 flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Back
+            </button>
+            <button type="button" 
+                    @click="nextStep()"
+                    :disabled="!canProceedStep2"
+                    class="flex-1 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                Continue
+            </button>
+        </div>
+    </div>
+
+    <!-- Step 3: Terms and Submit -->
+    <div x-show="step === 3" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform translate-x-4" x-transition:enter-end="opacity-100 transform translate-x-0">
+        <div class="space-y-4">
+            <!-- Terms and Conditions -->
+            <div class="flex items-start">
+                <div class="flex items-center h-5">
+                    <input id="terms" 
+                           name="terms" 
+                           type="checkbox" 
+                           required
+                           class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                           x-model="acceptTerms">
+                </div>
+                <div class="ml-3 text-sm">
+                    <label for="terms" class="text-gray-700">
+                        I agree to the 
+                        <a href="#" class="font-medium text-indigo-600 hover:text-indigo-500">Terms and Conditions</a>
+                        and 
+                        <a href="#" class="font-medium text-indigo-600 hover:text-indigo-500">Privacy Policy</a>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Marketing emails -->
+            <div class="flex items-start">
+                <div class="flex items-center h-5">
+                    <input id="marketing" 
+                           name="marketing" 
+                           type="checkbox" 
+                           class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                           x-model="acceptMarketing">
+                </div>
+                <div class="ml-3 text-sm">
+                    <label for="marketing" class="text-gray-700">
+                        I would like to receive product updates and marketing emails
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 flex space-x-3">
+            <button type="button" 
+                    @click="prevStep()"
+                    class="flex-1 flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Back
+            </button>
+            <button type="submit" 
+                    :disabled="!canSubmit"
+                    class="flex-1 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                <span id="register-loading" class="htmx-indicator">
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Creating account...
+                </span>
+                <span class="htmx-indicator-none">
+                    Create Account
+                </span>
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block footer_links %}
+<p class="text-center text-sm text-gray-600">
+    Already have an account?
+    <a href="{{ url_for('login') }}" class="font-medium text-indigo-600 hover:text-indigo-500">
+        Sign in here
+    </a>
+</p>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function registerForm() {
+        return {
+            step: 1,
+            firstName: '',
+            lastName: '',
+            email: '',
+            username: '',
+            password: '',
+            confirmPassword: '',
+            acceptTerms: false,
+            acceptMarketing: false,
+            showPassword: false,
+            showConfirmPassword: false,
+            emailError: false,
+            emailValid: false,
+            usernameError: false,
+            usernameValid: false,
+            passwordStrong: false,
+            
+            get canProceedStep1() {
+                return this.firstName.length > 0 && this.lastName.length > 0;
+            },
+            
+            get canProceedStep2() {
+                return this.email.length > 0 && 
+                       this.username.length > 0 && 
+                       this.password.length >= 8 && 
+                       this.passwordMatch &&
+                       this.emailValid && 
+                       this.usernameValid &&
+                       !this.emailError && 
+                       !this.usernameError;
+            },
+            
+            get canSubmit() {
+                return this.canProceedStep2 && this.acceptTerms;
+            },
+            
+            get passwordMatch() {
+                return this.password.length > 0 && 
+                       this.confirmPassword.length > 0 && 
+                       this.password === this.confirmPassword;
+            },
+            
+            get passwordMismatch() {
+                return this.confirmPassword.length > 0 && 
+                       this.password !== this.confirmPassword;
+            },
+            
+            nextStep() {
+                if (this.step < 3) {
+                    this.step++;
+                }
+            },
+            
+            prevStep() {
+                if (this.step > 1) {
+                    this.step--;
+                }
+            }
+        }
+    }
+
+    // Handle validation responses
+    document.addEventListener('htmx:afterRequest', function(event) {
+        const form = Alpine.$data(document.getElementById('register-form'));
+        
+        if (event.detail.target.id === 'email-validation') {
+            const response = event.detail.xhr.responseText;
+            if (response.includes('error') || response.includes('taken')) {
+                form.emailError = true;
+                form.emailValid = false;
+            } else if (response.includes('available')) {
+                form.emailError = false;
+                form.emailValid = true;
+            }
+        }
+        
+        if (event.detail.target.id === 'username-validation') {
+            const response = event.detail.xhr.responseText;
+            if (response.includes('error') || response.includes('taken')) {
+                form.usernameError = true;
+                form.usernameValid = false;
+            } else if (response.includes('available')) {
+                form.usernameError = false;
+                form.usernameValid = true;
+            }
+        }
+        
+        if (event.detail.target.id === 'password-strength') {
+            const response = event.detail.xhr.responseText;
+            form.passwordStrong = response.includes('strong') || response.includes('good');
+        }
+    });
+</script>
+{% endblock %} 

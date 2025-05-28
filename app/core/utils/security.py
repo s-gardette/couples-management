@@ -5,7 +5,7 @@ Security utilities for password hashing, JWT tokens, and other security function
 import secrets
 import string
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 import jwt
 from passlib.context import CryptContext
@@ -17,15 +17,15 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def create_access_token(
-    subject: Union[str, Any], expires_delta: Optional[timedelta] = None
+    subject: str | Any, expires_delta: timedelta | None = None
 ) -> str:
     """
     Create a JWT access token.
-    
+
     Args:
         subject: Token subject (usually user ID)
         expires_delta: Token expiration time
-        
+
     Returns:
         Encoded JWT token
     """
@@ -35,7 +35,7 @@ def create_access_token(
         expire = datetime.utcnow() + timedelta(
             minutes=settings.jwt_access_token_expire_minutes
         )
-    
+
     to_encode = {"exp": expire, "sub": str(subject)}
     encoded_jwt = jwt.encode(
         to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
@@ -43,13 +43,13 @@ def create_access_token(
     return encoded_jwt
 
 
-def create_refresh_token(subject: Union[str, Any]) -> str:
+def create_refresh_token(subject: str | Any) -> str:
     """
     Create a JWT refresh token.
-    
+
     Args:
         subject: Token subject (usually user ID)
-        
+
     Returns:
         Encoded JWT refresh token
     """
@@ -61,13 +61,13 @@ def create_refresh_token(subject: Union[str, Any]) -> str:
     return encoded_jwt
 
 
-def verify_token(token: str) -> Optional[Dict[str, Any]]:
+def verify_token(token: str) -> dict[str, Any] | None:
     """
     Verify and decode a JWT token.
-    
+
     Args:
         token: JWT token to verify
-        
+
     Returns:
         Decoded token payload or None if invalid
     """
@@ -83,10 +83,10 @@ def verify_token(token: str) -> Optional[Dict[str, Any]]:
 def get_password_hash(password: str) -> str:
     """
     Hash a password using bcrypt.
-    
+
     Args:
         password: Plain text password
-        
+
     Returns:
         Hashed password
     """
@@ -96,11 +96,11 @@ def get_password_hash(password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Verify a password against its hash.
-    
+
     Args:
         plain_password: Plain text password
         hashed_password: Hashed password
-        
+
     Returns:
         True if password matches, False otherwise
     """
@@ -110,10 +110,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def generate_password_reset_token(email: str) -> str:
     """
     Generate a password reset token.
-    
+
     Args:
         email: User email
-        
+
     Returns:
         Password reset token
     """
@@ -129,13 +129,13 @@ def generate_password_reset_token(email: str) -> str:
     return encoded_jwt
 
 
-def verify_password_reset_token(token: str) -> Optional[str]:
+def verify_password_reset_token(token: str) -> str | None:
     """
     Verify a password reset token.
-    
+
     Args:
         token: Password reset token
-        
+
     Returns:
         Email if token is valid, None otherwise
     """
@@ -149,10 +149,10 @@ def verify_password_reset_token(token: str) -> Optional[str]:
 def generate_random_string(length: int = 32) -> str:
     """
     Generate a random string.
-    
+
     Args:
         length: Length of the string
-        
+
     Returns:
         Random string
     """
@@ -163,12 +163,12 @@ def generate_random_string(length: int = 32) -> str:
 def generate_invite_code(length: int = 8) -> str:
     """
     Generate a random invite code.
-    
+
     Args:
         length: Length of the invite code
-        
+
     Returns:
         Random invite code (uppercase letters and numbers)
     """
     alphabet = string.ascii_uppercase + string.digits
-    return ''.join(secrets.choice(alphabet) for _ in range(length)) 
+    return ''.join(secrets.choice(alphabet) for _ in range(length))

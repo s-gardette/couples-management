@@ -3,12 +3,12 @@ Base service patterns for CRUD operations.
 """
 
 import logging
-from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union
+from typing import Any, Generic, TypeVar
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from app.core.models.base import BaseModel
 
@@ -24,24 +24,24 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     """
     Generic base service class for CRUD operations.
     """
-    
-    def __init__(self, model: Type[ModelType]):
+
+    def __init__(self, model: type[ModelType]):
         """
         Initialize the service with a model class.
-        
+
         Args:
             model: SQLAlchemy model class
         """
         self.model = model
-    
-    def get(self, db: Session, id: Union[UUID, str]) -> Optional[ModelType]:
+
+    def get(self, db: Session, id: UUID | str) -> ModelType | None:
         """
         Get a single record by ID.
-        
+
         Args:
             db: Database session
             id: Record ID
-            
+
         Returns:
             Model instance or None if not found
         """
@@ -53,18 +53,18 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Database error occurred"
             )
-    
-    def get_or_404(self, db: Session, id: Union[UUID, str]) -> ModelType:
+
+    def get_or_404(self, db: Session, id: UUID | str) -> ModelType:
         """
         Get a single record by ID or raise 404 if not found.
-        
+
         Args:
             db: Database session
             id: Record ID
-            
+
         Returns:
             Model instance
-            
+
         Raises:
             HTTPException: 404 if record not found
         """
@@ -75,36 +75,36 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 detail=f"{self.model.__name__} not found"
             )
         return obj
-    
+
     def get_multi(
         self,
         db: Session,
         *,
         skip: int = 0,
         limit: int = 100,
-        filters: Optional[Dict[str, Any]] = None
-    ) -> List[ModelType]:
+        filters: dict[str, Any] | None = None
+    ) -> list[ModelType]:
         """
         Get multiple records with pagination and filtering.
-        
+
         Args:
             db: Database session
             skip: Number of records to skip
             limit: Maximum number of records to return
             filters: Dictionary of field filters
-            
+
         Returns:
             List of model instances
         """
         try:
             query = db.query(self.model)
-            
+
             # Apply filters if provided
             if filters:
                 for field, value in filters.items():
                     if hasattr(self.model, field):
                         query = query.filter(getattr(self.model, field) == value)
-            
+
             return query.offset(skip).limit(limit).all()
         except SQLAlchemyError as e:
             logger.error(f"Error getting multiple {self.model.__name__}: {e}")
@@ -112,15 +112,15 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Database error occurred"
             )
-    
+
     def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
         """
         Create a new record.
-        
+
         Args:
             db: Database session
             obj_in: Pydantic schema with creation data
-            
+
         Returns:
             Created model instance
         """
@@ -146,32 +146,32 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Database error occurred"
             )
-    
+
     def update(
         self,
         db: Session,
         *,
         db_obj: ModelType,
-        obj_in: Union[UpdateSchemaType, Dict[str, Any]]
+        obj_in: UpdateSchemaType | dict[str, Any]
     ) -> ModelType:
         """
         Update an existing record.
-        
+
         Args:
             db: Database session
             db_obj: Existing model instance
             obj_in: Pydantic schema or dict with update data
-            
+
         Returns:
             Updated model instance
         """
         try:
             obj_data = obj_in.dict(exclude_unset=True) if hasattr(obj_in, 'dict') else obj_in
-            
+
             for field, value in obj_data.items():
                 if hasattr(db_obj, field):
                     setattr(db_obj, field, value)
-            
+
             db.add(db_obj)
             db.commit()
             db.refresh(db_obj)
@@ -191,15 +191,15 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Database error occurred"
             )
-    
-    def delete(self, db: Session, *, id: Union[UUID, str]) -> ModelType:
+
+    def delete(self, db: Session, *, id: UUID | str) -> ModelType:
         """
         Delete a record by ID.
-        
+
         Args:
             db: Database session
             id: Record ID
-            
+
         Returns:
             Deleted model instance
         """
@@ -216,30 +216,30 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Database error occurred"
             )
-    
-    def count(self, db: Session, filters: Optional[Dict[str, Any]] = None) -> int:
+
+    def count(self, db: Session, filters: dict[str, Any] | None = None) -> int:
         """
         Count records with optional filtering.
-        
+
         Args:
             db: Database session
             filters: Dictionary of field filters
-            
+
         Returns:
             Number of records
         """
         try:
             query = db.query(self.model)
-            
+
             if filters:
                 for field, value in filters.items():
                     if hasattr(self.model, field):
                         query = query.filter(getattr(self.model, field) == value)
-            
+
             return query.count()
         except SQLAlchemyError as e:
             logger.error(f"Error counting {self.model.__name__}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Database error occurred"
-            ) 
+            )

@@ -3,11 +3,11 @@ Health check endpoints for monitoring application status.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
-from app.database import get_db
 from app.config import settings
+from app.database import get_db
 
 router = APIRouter()
 
@@ -56,7 +56,7 @@ async def detailed_health_check(db: Session = Depends(get_db)):
         "environment": settings.environment,
         "components": {}
     }
-    
+
     # Check database
     try:
         result = db.execute(text("SELECT 1"))
@@ -71,8 +71,8 @@ async def detailed_health_check(db: Session = Depends(get_db)):
             "status": "unhealthy",
             "error": str(e)
         }
-    
+
     # Add more component checks here as needed
     # (Redis, external APIs, etc.)
-    
-    return health_status 
+
+    return health_status

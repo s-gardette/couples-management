@@ -2,17 +2,17 @@
 Core models module.
 """
 
-from .base import BaseModel, SoftDeleteModel, UUIDMixin, TimestampMixin, SoftDeleteMixin
-from .mixins import NameMixin, DescriptionMixin, ActiveMixin, SlugMixin, OrderMixin
+from .base import BaseModel, SoftDeleteMixin, SoftDeleteModel, TimestampMixin, UUIDMixin
+from .mixins import ActiveMixin, DescriptionMixin, NameMixin, OrderMixin, SlugMixin
 
 __all__ = [
     "BaseModel",
-    "SoftDeleteModel", 
+    "SoftDeleteModel",
     "UUIDMixin",
     "TimestampMixin",
     "SoftDeleteMixin",
     "NameMixin",
-    "DescriptionMixin", 
+    "DescriptionMixin",
     "ActiveMixin",
     "SlugMixin",
     "OrderMixin",

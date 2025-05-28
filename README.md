@@ -52,15 +52,43 @@ A modern, modular household expense tracking application built with FastAPI, HTM
 
 ## 🧪 Testing
 
-Run the test suite:
+The project includes comprehensive tests for all modules:
+
+### Quick Test Commands
+
 ```bash
-uv run pytest
+# Run all tests (recommended)
+python run_tests.py
+
+# Run with pytest directly
+uv run pytest tests/ -v
+
+# Run with coverage report
+python run_tests.py --coverage
+# or
+uv run pytest tests/ --cov=app --cov-report=html --cov-report=term-missing
 ```
 
-Run tests with coverage:
-```bash
-uv run pytest --cov=app
+### Test Structure
+
 ```
+tests/
+├── conftest.py              # Shared fixtures and test configuration
+├── test_main.py             # Main application tests
+├── test_jwt_system.py       # JWT authentication system tests
+├── test_password_security.py # Password security and validation tests
+└── __init__.py              # Test package initialization
+```
+
+### Test Coverage
+
+Current test coverage includes:
+- ✅ **Main Application** (4 tests) - Health checks, static files, app configuration
+- ✅ **JWT System** (20 tests) - Token creation, verification, blacklisting, refresh
+- ✅ **Password Security** (13 tests) - Hashing, validation, strength checking
+- ✅ **Security Utilities** (5 tests) - Token generation, email masking
+
+**Total: 42 tests** - All passing ✅
 
 ## 🏗️ Architecture
 
@@ -84,17 +112,21 @@ app/
 
 The project uses several tools for code quality:
 
-- **Black** - Code formatting
-- **Ruff** - Linting and import sorting
-- **MyPy** - Type checking
-- **Pytest** - Testing
+- **Ruff** - Linting, formatting, and import sorting
+- **MyPy** - Type checking (planned)
+- **Pytest** - Testing framework
 
 Run all quality checks:
 ```bash
-uv run black app tests
+# Linting and formatting
 uv run ruff check app tests
+uv run ruff format app tests
+
+# Run tests
+python run_tests.py
+
+# Type checking (when implemented)
 uv run mypy app
-uv run pytest
 ```
 
 ### Database Migrations
@@ -131,12 +163,16 @@ Key environment variables (see `env.example` for full list):
 - [x] Basic FastAPI application with health checks
 - [x] Frontend setup with Tailwind CSS and HTMX
 - [x] Configuration management
-- [x] Testing infrastructure
+- [x] Comprehensive testing infrastructure
+- [x] Authentication module (Phase 3)
+  - [x] JWT token system with blacklisting
+  - [x] Password security and validation
+  - [x] User management services
+  - [x] Auth API endpoints
+  - [x] Frontend templates (login, register, profile)
 
 ### 🚧 In Progress
-- [ ] Authentication module
-- [ ] Expense tracking module
-- [ ] Database models and migrations
+- [ ] Expense tracking module (Phase 4)
 
 ### 📅 Planned
 - [ ] Budget management
@@ -151,6 +187,13 @@ Key environment variables (see `env.example` for full list):
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+### Running Tests
+
+Before submitting a PR, ensure all tests pass:
+```bash
+python run_tests.py
+```
 
 ## 📄 License
 

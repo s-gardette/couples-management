@@ -4,9 +4,9 @@ Base model classes and mixins for the application.
 
 import uuid
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
-from sqlalchemy import Boolean, Column, DateTime, String
+from sqlalchemy import Boolean, Column, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import Session
@@ -16,7 +16,7 @@ from app.database import Base
 
 class UUIDMixin:
     """Mixin for UUID primary key."""
-    
+
     @declared_attr
     def id(cls):
         return Column(
@@ -29,7 +29,7 @@ class UUIDMixin:
 
 class TimestampMixin:
     """Mixin for created_at and updated_at timestamps."""
-    
+
     @declared_attr
     def created_at(cls):
         return Column(
@@ -38,7 +38,7 @@ class TimestampMixin:
             nullable=False,
             index=True
         )
-    
+
     @declared_attr
     def updated_at(cls):
         return Column(
@@ -51,20 +51,20 @@ class TimestampMixin:
 
 class SoftDeleteMixin:
     """Mixin for soft delete functionality."""
-    
+
     @declared_attr
     def is_deleted(cls):
         return Column(Boolean, default=False, nullable=False, index=True)
-    
+
     @declared_attr
     def deleted_at(cls):
         return Column(DateTime, nullable=True)
-    
+
     def soft_delete(self):
         """Mark the record as deleted."""
         self.is_deleted = True
         self.deleted_at = datetime.utcnow()
-    
+
     def restore(self):
         """Restore a soft-deleted record."""
         self.is_deleted = False
@@ -73,22 +73,22 @@ class SoftDeleteMixin:
 
 class BaseModel(Base, UUIDMixin, TimestampMixin):
     """Base model class with UUID primary key and timestamps."""
-    
+
     __abstract__ = True
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         """Convert model instance to dictionary."""
         return {
             column.name: getattr(self, column.name)
             for column in self.__table__.columns
         }
-    
+
     def update(self, **kwargs) -> None:
         """Update model instance with provided kwargs."""
         for key, value in kwargs.items():
             if hasattr(self, key):
                 setattr(self, key, value)
-    
+
     @classmethod
     def create(cls, db: Session, **kwargs):
         """Create a new instance and save to database."""
@@ -97,14 +97,14 @@ class BaseModel(Base, UUIDMixin, TimestampMixin):
         db.commit()
         db.refresh(instance)
         return instance
-    
+
     def save(self, db: Session):
         """Save the current instance to database."""
         db.add(self)
         db.commit()
         db.refresh(self)
         return self
-    
+
     def delete(self, db: Session):
         """Delete the current instance from database."""
         db.delete(self)
@@ -113,15 +113,15 @@ class BaseModel(Base, UUIDMixin, TimestampMixin):
 
 class SoftDeleteModel(BaseModel, SoftDeleteMixin):
     """Base model class with soft delete functionality."""
-    
+
     __abstract__ = True
-    
+
     @classmethod
     def get_active(cls, db: Session):
         """Get all active (non-deleted) records."""
-        return db.query(cls).filter(cls.is_deleted == False)
-    
+        return db.query(cls).filter(not cls.is_deleted)
+
     @classmethod
     def get_deleted(cls, db: Session):
         """Get all soft-deleted records."""
-        return db.query(cls).filter(cls.is_deleted == True) 
+        return db.query(cls).filter(cls.is_deleted)

@@ -2,8 +2,7 @@ import os
 import sys
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
@@ -15,7 +14,6 @@ from app.config import settings
 from app.database import Base
 
 # Import all models to ensure they're registered with metadata
-from app.modules.auth.models import User, EmailVerificationToken, PasswordResetToken, UserSession, PasswordHistory
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -77,7 +75,7 @@ def run_migrations_online() -> None:
     # Override the sqlalchemy.url in the config
     configuration = config.get_section(config.config_ini_section)
     configuration["sqlalchemy.url"] = get_url()
-    
+
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",

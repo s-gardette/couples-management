@@ -1,0 +1,82 @@
+"""
+Auth module schemas.
+"""
+
+from .auth import (
+    AuthResponse,
+    DeviceInfo,
+    EmailVerificationRequest,
+    EmailVerificationResend,
+    LoginRequest,
+    LoginResponse,
+    LogoutRequest,
+    PasswordResetConfirm,
+    PasswordResetRequest,
+    PasswordResetResponse,
+    PasswordStrengthCheck,
+    PasswordStrengthResponse,
+    RegisterRequest,
+    RegisterResponse,
+    SecurityEvent,
+    SessionInfo,
+    TokenInfo,
+    TokenRefreshRequest,
+    TokenRefreshResponse,
+    TwoFactorSetup,
+    TwoFactorVerify,
+)
+from .user import (
+    AvailabilityResponse,
+    AvatarUpdate,
+    EmailAvailability,
+    PasswordChange,
+    UserBase,
+    UserCreate,
+    UserListResponse,
+    UsernameAvailability,
+    UserProfile,
+    UserResponse,
+    UserSearch,
+    UserStats,
+    UserUpdate,
+)
+
+__all__ = [
+    # Auth schemas
+    "LoginRequest",
+    "LoginResponse",
+    "RegisterRequest",
+    "RegisterResponse",
+    "TokenRefreshRequest",
+    "TokenRefreshResponse",
+    "LogoutRequest",
+    "PasswordResetRequest",
+    "PasswordResetResponse",
+    "PasswordResetConfirm",
+    "EmailVerificationRequest",
+    "EmailVerificationResend",
+    "AuthResponse",
+    "TokenInfo",
+    "SessionInfo",
+    "PasswordStrengthCheck",
+    "PasswordStrengthResponse",
+    "TwoFactorSetup",
+    "TwoFactorVerify",
+    "DeviceInfo",
+    "SecurityEvent",
+
+    # User schemas
+    "UserBase",
+    "UserCreate",
+    "UserUpdate",
+    "UserResponse",
+    "UserProfile",
+    "UserListResponse",
+    "PasswordChange",
+    "AvatarUpdate",
+    "UserStats",
+    "UserSearch",
+    "EmailAvailability",
+    "UsernameAvailability",
+    "AvailabilityResponse"
+]
