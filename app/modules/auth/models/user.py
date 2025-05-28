@@ -49,6 +49,23 @@ class User(BaseModel, ActiveMixin):
     # Note: is_active comes from ActiveMixin
     # Note: id, created_at, updated_at come from BaseModel
     
+    # Relationships
+    email_verification_tokens = relationship(
+        "EmailVerificationToken",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    password_reset_tokens = relationship(
+        "PasswordResetToken",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    sessions = relationship(
+        "UserSession",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    
     def __repr__(self) -> str:
         return f"<User(id={self.id}, username='{self.username}', email='{self.email}')>"
     

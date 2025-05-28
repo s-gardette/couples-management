@@ -14,6 +14,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from app.config import settings
 from app.database import Base
 
+# Import all models to ensure they're registered with metadata
+from app.modules.auth.models import User, EmailVerificationToken, PasswordResetToken, UserSession
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
