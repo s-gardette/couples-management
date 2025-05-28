@@ -65,6 +65,12 @@ class User(BaseModel, ActiveMixin):
         back_populates="user",
         cascade="all, delete-orphan"
     )
+    password_history = relationship(
+        "PasswordHistory",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="PasswordHistory.changed_at.desc()"
+    )
     
     def __repr__(self) -> str:
         return f"<User(id={self.id}, username='{self.username}', email='{self.email}')>"
