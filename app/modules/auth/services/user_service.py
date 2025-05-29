@@ -26,6 +26,18 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
         super().__init__(User)
         self.db = db
 
+    async def get_by_id(self, user_id: UUID) -> User | None:
+        """
+        Get user by ID.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            User object or None if not found
+        """
+        return self.get(self.db, user_id)
+
     async def get_user_profile(self, user_id: UUID) -> User | None:
         """
         Get user profile by ID.

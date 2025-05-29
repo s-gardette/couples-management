@@ -27,7 +27,7 @@ def validate_password_strength_detailed(password: str) -> dict[str, any]:
         "is_valid": is_valid,
         "errors": errors,
         "score": score,
-        "strength_level": get_strength_level(score),
+        "level": get_strength_level(score),
         "suggestions": get_password_suggestions(password, errors)
     }
 

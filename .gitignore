@@ -1,6 +1,7 @@
 # env file
 .env
 !.env.example
+.coverage.*
 
 # uv 
 .venv/

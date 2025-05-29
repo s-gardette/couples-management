@@ -340,6 +340,7 @@ class AuthService(BaseService[User, UserCreate, UserUpdate]):
 
             history_hashes = [ph.password_hash for ph in password_history]
             is_allowed, history_error = check_password_history(
+                user_id=user.id,
                 new_password=new_password,
                 password_history=history_hashes,
                 history_limit=5

@@ -26,14 +26,14 @@ class TestPasswordStrength:
         """Test weak password validation."""
         result = validate_password_strength_detailed("123")
         assert not result["is_valid"]
-        assert result["strength_level"] == "very_weak"
+        assert result["level"] == "very_weak"
         assert len(result["errors"]) > 0
 
     def test_strong_password(self):
         """Test strong password validation."""
         result = validate_password_strength_detailed("MyStr0ng!P@ssw0rd")
         assert result["is_valid"]
-        assert result["strength_level"] in ["strong", "very_strong"]
+        assert result["level"] in ["strong", "very_strong"]
         assert len(result["errors"]) == 0
 
     def test_password_scoring(self):
