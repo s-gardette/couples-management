@@ -4,6 +4,7 @@ Main FastAPI application entry point.
 
 import logging
 from contextlib import asynccontextmanager
+from uuid import UUID
 from fastapi import FastAPI, Request, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -25,6 +26,7 @@ from app.modules.expenses.routers import (
     analytics_router,
 )
 from app.modules.expenses.services import HouseholdService
+from app.modules.expenses.models.user_household import UserHousehold
 
 logger = logging.getLogger(__name__)
 
@@ -234,29 +236,50 @@ async def expenses_dashboard_page(
             include_inactive=False
         )
         
-        # Mock recent expenses data for now
-        mock_expenses = [
-            {
-                "id": "1",
-                "title": "Grocery Shopping",
-                "amount": 89.50,
-                "description": "Weekly groceries from Walmart",
-                "date": "2024-01-15",
-                "category": "Food & Dining",
-                "created_by": {"username": "john_doe", "first_name": "John", "last_name": "Doe"},
-                "payment_status": "paid"
-            },
-            {
-                "id": "2", 
-                "title": "Electric Bill",
-                "amount": 145.30,
-                "description": "Monthly electricity bill",
-                "date": "2024-01-14",
-                "category": "Utilities",
-                "created_by": {"username": "jane_doe", "first_name": "Jane", "last_name": "Doe"},
-                "payment_status": "pending"
+        # Get recent expenses for the user
+        from app.modules.expenses.services.expense_service import ExpenseService
+        expense_service = ExpenseService(db)
+        
+        success, message, recent_expenses = await expense_service.get_user_recent_expenses(
+            user_id=current_user.id,
+            limit=5
+        )
+        
+        if not success:
+            logger.warning(f"Could not load recent expenses: {message}")
+            recent_expenses = []
+        
+        # Format expenses for template
+        formatted_expenses = []
+        for expense in recent_expenses:
+            # Determine payment status based on expense shares
+            if hasattr(expense, 'shares') and expense.shares:
+                paid_shares = sum(1 for share in expense.shares if share.is_paid)
+                total_shares = len(expense.shares)
+                if paid_shares == total_shares:
+                    payment_status = "paid"
+                elif paid_shares == 0:
+                    payment_status = "unpaid"
+                else:
+                    payment_status = "pending"
+            else:
+                payment_status = "unpaid"
+            
+            formatted_expense = {
+                "id": str(expense.id),
+                "title": expense.title,
+                "amount": float(expense.amount),
+                "description": expense.description or "",
+                "date": expense.expense_date.strftime('%Y-%m-%d'),
+                "category": expense.category.name if expense.category else "Other",
+                "created_by": {
+                    "username": expense.creator.username if expense.creator else "Unknown",
+                    "first_name": expense.creator.first_name if expense.creator else "Unknown",
+                    "last_name": expense.creator.last_name if expense.creator else "User"
+                },
+                "payment_status": payment_status
             }
-        ]
+            formatted_expenses.append(formatted_expense)
         
         return templates.TemplateResponse(
             request,
@@ -264,7 +287,7 @@ async def expenses_dashboard_page(
             {
                 "current_user": current_user,
                 "households": user_households,
-                "expenses": mock_expenses
+                "expenses": formatted_expenses
             }
         )
     except Exception as e:
@@ -352,14 +375,61 @@ async def household_detail(
     if settings.require_authentication_for_all and not current_user:
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     
-    return templates.TemplateResponse(
-        request,
-        "expenses/households/detail.html",
-        {
-            "current_user": current_user,
-            "household_id": household_id
-        }
-    )
+    # Fetch household data from database
+    db = next(get_db())
+    try:
+        household_service = HouseholdService(db)
+        
+        # Convert household_id to UUID
+        try:
+            household_uuid = UUID(household_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid household ID format")
+        
+        # Get the household details with members
+        household = await household_service.get_household_with_members(household_uuid)
+        if not household:
+            raise HTTPException(status_code=404, detail="Household not found")
+        
+        # Check if user has permission and get their role
+        has_permission = await household_service.check_user_permission(
+            user_id=current_user.id,
+            household_id=household_uuid
+        )
+        
+        if not has_permission:
+            raise HTTPException(status_code=403, detail="Access denied to this household")
+        
+        # Get user's membership info to determine role
+        user_membership = (
+            db.query(UserHousehold)
+            .filter(
+                UserHousehold.user_id == current_user.id,
+                UserHousehold.household_id == household_uuid,
+                UserHousehold.is_active == True
+            )
+            .first()
+        )
+        
+        # Add user role to the household object for template
+        household.user_role = user_membership.role.value if user_membership else 'member'
+        
+        return templates.TemplateResponse(
+            request,
+            "expenses/households/detail.html",
+            {
+                "current_user": current_user,
+                "household": household,
+                "household_id": household_id
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error loading household details: {e}")
+        raise HTTPException(status_code=500, detail="Error loading household details")
+    finally:
+        db.close()
 
 
 @app.get("/households/{household_id}/expenses", response_class=HTMLResponse)
@@ -372,14 +442,112 @@ async def household_expenses(
     if settings.require_authentication_for_all and not current_user:
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     
-    return templates.TemplateResponse(
-        request,
-        "expenses/expenses/list.html",
-        {
-            "current_user": current_user,
-            "household_id": household_id
-        }
-    )
+    # Fetch household data from database
+    db = next(get_db())
+    try:
+        household_service = HouseholdService(db)
+        
+        # Convert household_id to UUID
+        try:
+            household_uuid = UUID(household_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid household ID format")
+        
+        # Get the household details with members
+        household = await household_service.get_household_with_members(household_uuid)
+        if not household:
+            raise HTTPException(status_code=404, detail="Household not found")
+        
+        # Check if user has permission
+        has_permission = await household_service.check_user_permission(
+            user_id=current_user.id,
+            household_id=household_uuid
+        )
+        
+        if not has_permission:
+            raise HTTPException(status_code=403, detail="Access denied to this household")
+        
+        # Get user's membership info to determine role
+        user_membership = (
+            db.query(UserHousehold)
+            .filter(
+                UserHousehold.user_id == current_user.id,
+                UserHousehold.household_id == household_uuid,
+                UserHousehold.is_active == True
+            )
+            .first()
+        )
+        
+        # Add user role to the household object for template
+        household.user_role = user_membership.role.value if user_membership else 'member'
+        
+        # Fetch initial expenses data for the template
+        from app.modules.expenses.services.expense_service import ExpenseService
+        expense_service = ExpenseService(db)
+        
+        success, message, initial_expenses = await expense_service.get_household_expenses(
+            household_id=household_uuid,
+            user_id=current_user.id,
+            skip=0,
+            limit=20,
+            sort_by="expense_date",
+            sort_order="desc"
+        )
+        
+        if not success:
+            logger.warning(f"Could not load initial expenses: {message}")
+            initial_expenses = []
+        
+        # Format expenses for template
+        formatted_expenses = []
+        for expense in initial_expenses:
+            # Determine payment status based on expense shares
+            if hasattr(expense, 'shares') and expense.shares:
+                paid_shares = sum(1 for share in expense.shares if share.is_paid)
+                total_shares = len(expense.shares)
+                if paid_shares == total_shares:
+                    payment_status_value = "paid"
+                elif paid_shares == 0:
+                    payment_status_value = "unpaid"
+                else:
+                    payment_status_value = "pending"
+            else:
+                payment_status_value = "unpaid"
+            
+            formatted_expense = {
+                "id": str(expense.id),
+                "title": expense.title,
+                "amount": float(expense.amount),
+                "description": expense.description or "",
+                "date": expense.expense_date.strftime('%Y-%m-%d'),
+                "category": expense.category.name if expense.category else "Other",
+                "created_by": {
+                    "username": expense.creator.username if expense.creator else "Unknown",
+                    "first_name": expense.creator.first_name if expense.creator else "Unknown",
+                    "last_name": expense.creator.last_name if expense.creator else "User"
+                },
+                "payment_status": payment_status_value,
+                "household_id": str(expense.household_id) if expense.household_id else household_id
+            }
+            formatted_expenses.append(formatted_expense)
+        
+        return templates.TemplateResponse(
+            request,
+            "expenses/expenses/list.html",
+            {
+                "current_user": current_user,
+                "household": household,
+                "household_id": household_id,
+                "initial_expenses": formatted_expenses
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error loading household expenses page: {e}")
+        raise HTTPException(status_code=500, detail="Error loading household expenses")
+    finally:
+        db.close()
 
 
 @app.get("/households/{household_id}/analytics", response_class=HTMLResponse)
@@ -603,65 +771,176 @@ async def expenses_recent_partial(
     request: Request,
     limit: int = 5,
     household_id: str = None,
+    search: str = "",
+    category: str = "",
+    date_range: str = "",
+    min_amount: str = "",
+    max_amount: str = "",
+    payment_status: str = "",
+    created_by: str = "",
+    sort_by: str = "date_desc",
+    page: int = 1,
+    per_page: int = 20,
+    view_mode: str = "cards",
+    view_type: str = "recent",  # "recent" for simple view, "list" for full view
     current_user = Depends(get_current_user_from_cookie_or_header)
 ):
-    """Recent expenses partial for HTMX loading."""
+    """Unified expenses partial for HTMX loading - handles both recent and list views."""
     if settings.require_authentication_for_all and not current_user:
         return HTMLResponse("<div class='text-red-500'>Authentication required</div>", status_code=401)
     
-    # Get recent expenses from API
-    import requests
-    import json
-    
+    # Get expenses from database
+    db = next(get_db())
     try:
-        # Build API URL
-        if household_id:
-            api_url = f"http://localhost:8000/api/households/{household_id}/expenses"
+        from app.modules.expenses.services.expense_service import ExpenseService
+        expense_service = ExpenseService(db)
+        
+        # For list view, use more advanced filtering and pagination
+        if view_type == "list":
+            # Build filters dictionary
+            filters = {}
+            if search:
+                filters['search'] = search
+            if category:
+                filters['category'] = category
+            if date_range:
+                filters['date_range'] = date_range
+            # Parse min_amount and max_amount safely
+            if min_amount and min_amount.strip():
+                try:
+                    filters['min_amount'] = float(min_amount)
+                except ValueError:
+                    pass  # Ignore invalid values
+            if max_amount and max_amount.strip():
+                try:
+                    filters['max_amount'] = float(max_amount)
+                except ValueError:
+                    pass  # Ignore invalid values
+            if payment_status:
+                filters['payment_status'] = payment_status
+            if created_by:
+                filters['created_by'] = created_by
+            
+            # Convert sort_by to service format
+            sort_field = "expense_date"
+            sort_order = "desc"
+            if sort_by == "date_asc":
+                sort_field, sort_order = "expense_date", "asc"
+            elif sort_by == "amount_desc":
+                sort_field, sort_order = "amount", "desc"
+            elif sort_by == "amount_asc":
+                sort_field, sort_order = "amount", "asc"
+            elif sort_by == "title_asc":
+                sort_field, sort_order = "title", "asc"
+            elif sort_by == "title_desc":
+                sort_field, sort_order = "title", "desc"
+            
+            # Calculate skip for pagination
+            skip = (page - 1) * per_page
+            actual_limit = per_page
         else:
-            api_url = "http://localhost:8000/api/expenses/recent"
+            # For recent view, use simpler parameters
+            filters = {}
+            sort_field = "expense_date"
+            sort_order = "desc"
+            skip = 0
+            actual_limit = limit
         
-        # Make API request with authentication
-        headers = {
-            "Authorization": f"Bearer {current_user.access_token if hasattr(current_user, 'access_token') else 'dummy'}"
-        }
-        params = {"limit": limit}
+        if household_id:
+            # Get expenses for specific household
+            try:
+                household_uuid = UUID(household_id)
+            except ValueError:
+                return HTMLResponse("<div class='text-red-500'>Invalid household ID</div>", status_code=400)
+            
+            success, message, expenses = await expense_service.get_household_expenses(
+                household_id=household_uuid,
+                user_id=current_user.id,
+                skip=skip,
+                limit=actual_limit,
+                filters=filters,
+                sort_by=sort_field,
+                sort_order=sort_order
+            )
+        else:
+            # Get recent expenses across all user's households
+            success, message, expenses = await expense_service.get_user_recent_expenses(
+                user_id=current_user.id,
+                limit=actual_limit
+            )
         
-        # For now, let's create mock data since we need to fix the API integration
-        mock_expenses = [
-            {
-                "id": "1",
-                "title": "Grocery Shopping",
-                "amount": 89.50,
-                "description": "Weekly groceries from Walmart",
-                "date": "2024-01-15",
-                "category": "Food & Dining",
-                "created_by": {"username": "john_doe", "first_name": "John", "last_name": "Doe"},
-                "payment_status": "paid"
-            },
-            {
-                "id": "2", 
-                "title": "Electric Bill",
-                "amount": 145.30,
-                "description": "Monthly electricity bill",
-                "date": "2024-01-14",
-                "category": "Utilities",
-                "created_by": {"username": "jane_doe", "first_name": "Jane", "last_name": "Doe"},
-                "payment_status": "pending"
+        if not success:
+            logger.error(f"Error fetching expenses: {message}")
+            return HTMLResponse("<div class='text-red-500'>Error loading expenses</div>", status_code=500)
+        
+        # Format expenses for template
+        formatted_expenses = []
+        for expense in expenses:
+            # Determine payment status based on expense shares
+            if hasattr(expense, 'shares') and expense.shares:
+                paid_shares = sum(1 for share in expense.shares if share.is_paid)
+                total_shares = len(expense.shares)
+                if paid_shares == total_shares:
+                    payment_status_value = "paid"
+                elif paid_shares == 0:
+                    payment_status_value = "unpaid"
+                else:
+                    payment_status_value = "pending"
+            else:
+                payment_status_value = "unpaid"
+            
+            formatted_expense = {
+                "id": str(expense.id),
+                "title": expense.title,
+                "amount": float(expense.amount),
+                "description": expense.description or "",
+                "date": expense.expense_date.strftime('%Y-%m-%d'),
+                "category": expense.category.name if expense.category else "Other",
+                "created_by": {
+                    "username": expense.creator.username if expense.creator else "Unknown",
+                    "first_name": expense.creator.first_name if expense.creator else "Unknown",
+                    "last_name": expense.creator.last_name if expense.creator else "User"
+                },
+                "payment_status": payment_status_value,
+                "household_id": str(expense.household_id) if expense.household_id else household_id
             }
-        ]
+            formatted_expenses.append(formatted_expense)
+        
+        # Calculate pagination info for list view
+        pagination = None
+        if view_type == "list":
+            total_expenses = len(formatted_expenses)  # Simplified, ideally we'd get actual count
+            total_pages = (total_expenses + per_page - 1) // per_page
+            pagination = {
+                "page": page,
+                "per_page": per_page,
+                "total": total_expenses,
+                "total_pages": total_pages,
+                "has_previous": page > 1,
+                "has_next": page < total_pages
+            }
+        
+        # Choose template based on view type
+        template_name = "partials/expenses/recent.html" if view_type == "recent" else "partials/expenses/list.html"
         
         return templates.TemplateResponse(
             request,
-            "partials/expenses/recent.html",
+            template_name,
             {
                 "current_user": current_user,
-                "expenses": mock_expenses[:limit],
-                "household_id": household_id
+                "expenses": formatted_expenses,
+                "household_id": household_id,
+                "view_mode": view_mode,
+                "view_type": view_type,
+                "pagination": pagination
             }
         )
+        
     except Exception as e:
-        logger.error(f"Error loading recent expenses: {e}")
+        logger.error(f"Error loading expenses: {e}")
         return HTMLResponse("<div class='text-red-500'>Error loading expenses</div>", status_code=500)
+    finally:
+        db.close()
 
 
 @app.get("/partials/expenses/create", response_class=HTMLResponse)
@@ -682,6 +961,108 @@ async def expense_create_partial(
             "household_id": household_id
         }
     )
+
+
+@app.get("/partials/expenses/{expense_id}/details", response_class=HTMLResponse)
+async def expense_details_partial(
+    request: Request,
+    expense_id: str,
+    current_user = Depends(get_current_user_from_cookie_or_header)
+):
+    """Expense details modal partial for HTMX loading."""
+    if settings.require_authentication_for_all and not current_user:
+        return HTMLResponse("<div class='text-red-500'>Authentication required</div>", status_code=401)
+    
+    # Get expense details from database
+    db = next(get_db())
+    try:
+        from app.modules.expenses.services.expense_service import ExpenseService
+        expense_service = ExpenseService(db)
+        
+        # Convert expense_id to UUID
+        try:
+            expense_uuid = UUID(expense_id)
+        except ValueError:
+            return HTMLResponse("<div class='text-red-500'>Invalid expense ID format</div>", status_code=400)
+        
+        # Get the expense details
+        success, message, expense = await expense_service.get_expense_details(
+            expense_id=expense_uuid,
+            user_id=current_user.id
+        )
+        
+        if not success:
+            logger.error(f"Error fetching expense details: {message}")
+            return HTMLResponse("<div class='text-red-500'>Expense not found or access denied</div>", status_code=404)
+        
+        # Format expense data for template
+        if hasattr(expense, 'shares') and expense.shares:
+            paid_shares = sum(1 for share in expense.shares if share.is_paid)
+            total_shares = len(expense.shares)
+            if paid_shares == total_shares:
+                payment_status = "paid"
+            elif paid_shares == 0:
+                payment_status = "unpaid"
+            else:
+                payment_status = "pending"
+        else:
+            payment_status = "unpaid"
+        
+        formatted_expense = {
+            "id": str(expense.id),
+            "title": expense.title,
+            "amount": float(expense.amount),
+            "description": expense.description or "",
+            "expense_date": expense.expense_date.strftime('%Y-%m-%d'),
+            "created_at": expense.created_at.strftime('%B %d, %Y at %I:%M %p') if expense.created_at else "Unknown",
+            "category": {
+                "name": expense.category.name if expense.category else "Other",
+                "id": str(expense.category.id) if expense.category else None
+            },
+            "creator": {
+                "username": expense.creator.username if expense.creator else "Unknown",
+                "first_name": expense.creator.first_name if expense.creator else "Unknown",
+                "last_name": expense.creator.last_name if expense.creator else "User",
+                "full_name": f"{expense.creator.first_name} {expense.creator.last_name}" if expense.creator else "Unknown User"
+            },
+            "payment_status": payment_status,
+            "household": {
+                "id": str(expense.household_id) if expense.household_id else None,
+                "name": expense.household.name if hasattr(expense, 'household') and expense.household else "Unknown Household"
+            },
+            "shares": []
+        }
+        
+        # Format shares if available
+        if hasattr(expense, 'shares') and expense.shares:
+            for share in expense.shares:
+                formatted_share = {
+                    "id": str(share.id),
+                    "user": {
+                        "id": str(share.user_household.user_id) if share.user_household else "Unknown",
+                        "full_name": f"{share.user_household.user.first_name} {share.user_household.user.last_name}" if share.user_household and share.user_household.user else "Unknown User",
+                        "username": share.user_household.user.username if share.user_household and share.user_household.user else "unknown"
+                    },
+                    "amount": float(share.share_amount),
+                    "is_paid": share.is_paid,
+                    "paid_at": share.paid_at.strftime('%B %d, %Y at %I:%M %p') if share.paid_at else None
+                }
+                formatted_expense["shares"].append(formatted_share)
+        
+        return templates.TemplateResponse(
+            request,
+            "partials/expenses/details.html",
+            {
+                "current_user": current_user,
+                "expense": formatted_expense
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Error loading expense details: {e}")
+        return HTMLResponse("<div class='text-red-500'>Error loading expense details</div>", status_code=500)
+    finally:
+        db.close()
 
 
 # ============================================================================
@@ -870,6 +1251,110 @@ async def onboarding_complete(
         "onboarding/complete.html",
         {"current_user": current_user}
     )
+
+
+@app.get("/expenses/{expense_id}", response_class=HTMLResponse)
+async def expense_detail_page(
+    request: Request,
+    expense_id: str,
+    current_user = Depends(get_current_user_from_cookie_or_header)
+):
+    """Full page expense detail view."""
+    if settings.require_authentication_for_all and not current_user:
+        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+    
+    # Get expense details from database - reuse the same logic as the partial
+    db = next(get_db())
+    try:
+        from app.modules.expenses.services.expense_service import ExpenseService
+        expense_service = ExpenseService(db)
+        
+        # Convert expense_id to UUID
+        try:
+            expense_uuid = UUID(expense_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid expense ID format")
+        
+        # Get the expense details
+        success, message, expense = await expense_service.get_expense_details(
+            expense_id=expense_uuid,
+            user_id=current_user.id
+        )
+        
+        if not success:
+            logger.error(f"Error fetching expense details: {message}")
+            raise HTTPException(status_code=404, detail="Expense not found or access denied")
+        
+        # Format expense data for template (same as partial)
+        if hasattr(expense, 'shares') and expense.shares:
+            paid_shares = sum(1 for share in expense.shares if share.is_paid)
+            total_shares = len(expense.shares)
+            if paid_shares == total_shares:
+                payment_status = "paid"
+            elif paid_shares == 0:
+                payment_status = "unpaid"
+            else:
+                payment_status = "pending"
+        else:
+            payment_status = "unpaid"
+        
+        formatted_expense = {
+            "id": str(expense.id),
+            "title": expense.title,
+            "amount": float(expense.amount),
+            "description": expense.description or "",
+            "expense_date": expense.expense_date.strftime('%Y-%m-%d'),
+            "created_at": expense.created_at.strftime('%B %d, %Y at %I:%M %p') if expense.created_at else "Unknown",
+            "category": {
+                "name": expense.category.name if expense.category else "Other",
+                "id": str(expense.category.id) if expense.category else None
+            },
+            "creator": {
+                "username": expense.creator.username if expense.creator else "Unknown",
+                "first_name": expense.creator.first_name if expense.creator else "Unknown",
+                "last_name": expense.creator.last_name if expense.creator else "User",
+                "full_name": f"{expense.creator.first_name} {expense.creator.last_name}" if expense.creator else "Unknown User"
+            },
+            "payment_status": payment_status,
+            "household": {
+                "id": str(expense.household_id) if expense.household_id else None,
+                "name": expense.household.name if hasattr(expense, 'household') and expense.household else "Unknown Household"
+            },
+            "shares": []
+        }
+        
+        # Format shares if available
+        if hasattr(expense, 'shares') and expense.shares:
+            for share in expense.shares:
+                formatted_share = {
+                    "id": str(share.id),
+                    "user": {
+                        "id": str(share.user_household.user_id) if share.user_household else "Unknown",
+                        "full_name": f"{share.user_household.user.first_name} {share.user_household.user.last_name}" if share.user_household and share.user_household.user else "Unknown User",
+                        "username": share.user_household.user.username if share.user_household and share.user_household.user else "unknown"
+                    },
+                    "amount": float(share.share_amount),
+                    "is_paid": share.is_paid,
+                    "paid_at": share.paid_at.strftime('%B %d, %Y at %I:%M %p') if share.paid_at else None
+                }
+                formatted_expense["shares"].append(formatted_share)
+        
+        return templates.TemplateResponse(
+            request,
+            "expenses/expenses/detail.html",
+            {
+                "current_user": current_user,
+                "expense": formatted_expense
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error loading expense detail page: {e}")
+        raise HTTPException(status_code=500, detail="Error loading expense details")
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":

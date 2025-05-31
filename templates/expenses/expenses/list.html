@@ -18,7 +18,7 @@
         <div class="mt-4 sm:mt-0 flex space-x-3">
             <div class="flex rounded-md shadow-sm">
                 <button 
-                    @click="viewMode = 'cards'"
+                    @click="viewMode = 'cards'; applyFilters()"
                     :class="viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
                     class="relative inline-flex items-center px-4 py-2 rounded-l-md border border-gray-300 text-sm font-medium focus:z-10 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                 >
@@ -28,7 +28,7 @@
                     <span class="ml-2">Cards</span>
                 </button>
                 <button 
-                    @click="viewMode = 'table'"
+                    @click="viewMode = 'table'; applyFilters()"
                     :class="viewMode === 'table' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
                     class="relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-300 border-l-0 text-sm font-medium focus:z-10 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                 >
@@ -52,6 +52,11 @@
 
     <!-- Filters and Search -->
     <div class="bg-white shadow rounded-lg p-4">
+        <!-- Hidden form fields for HTMX -->
+        <input type="hidden" name="view_mode" x-model="viewMode">
+        <input type="hidden" name="min_amount" x-model="filters.minAmount">
+        <input type="hidden" name="max_amount" x-model="filters.maxAmount">
+        
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <!-- Search -->
             <div class="lg:col-span-2">
@@ -219,57 +224,126 @@
     <!-- Expenses List -->
     <div 
         id="expenses-container"
-        hx-get="{% if household %}/api/households/{{ household.id }}/expenses{% else %}/api/expenses/recent{% endif %}"
-        hx-trigger="load, applyFilters from:body"
+        hx-get="{% if household %}/partials/expenses/recent?household_id={{ household.id }}&view_type=list{% else %}/partials/expenses/recent?view_type=list{% endif %}"
+        hx-trigger="applyFilters from:body"
         hx-target="#expenses-container"
         hx-swap="innerHTML"
-        hx-include="[name='search'], [name='category'], [name='date_range'], [name='payment_status'], [name='created_by'], [name='sort_by']"
+        hx-include="[name='search'], [name='category'], [name='date_range'], [name='payment_status'], [name='created_by'], [name='sort_by'], [name='min_amount'], [name='max_amount'], [name='view_mode']"
     >
-        <!-- Loading state -->
-        <div x-show="viewMode === 'cards'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div class="bg-white shadow rounded-lg p-6 animate-pulse">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="h-4 bg-gray-200 rounded w-3/4"></div>
-                    <div class="h-6 bg-gray-200 rounded w-16"></div>
-                </div>
-                <div class="space-y-2">
-                    <div class="h-3 bg-gray-200 rounded w-1/2"></div>
-                    <div class="h-3 bg-gray-200 rounded w-2/3"></div>
-                </div>
-            </div>
-            <div class="bg-white shadow rounded-lg p-6 animate-pulse">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="h-4 bg-gray-200 rounded w-3/4"></div>
-                    <div class="h-6 bg-gray-200 rounded w-16"></div>
-                </div>
-                <div class="space-y-2">
-                    <div class="h-3 bg-gray-200 rounded w-1/2"></div>
-                    <div class="h-3 bg-gray-200 rounded w-2/3"></div>
-                </div>
-            </div>
-        </div>
+        <!-- Initial server-rendered content (default cards view) -->
+        {% if initial_expenses %}
+            <!-- Server-rendered expenses (cards view by default) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for expense in initial_expenses %}
+                    <div class="bg-white shadow rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                        <div class="p-6">
+                            <!-- Header -->
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-lg font-semibold text-gray-900 truncate">{{ expense.title }}</h3>
+                                <div class="flex items-center space-x-2">
+                                    <!-- Payment Status Badge -->
+                                    {% if expense.payment_status == 'paid' %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            Paid
+                                        </span>
+                                    {% elif expense.payment_status == 'pending' %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                            Pending
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                            Unpaid
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
 
-        <div x-show="viewMode === 'table'" class="bg-white shadow rounded-lg overflow-hidden">
-            <div class="animate-pulse">
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <div class="h-4 bg-gray-200 rounded w-1/4"></div>
-                </div>
-                <div class="divide-y divide-gray-200">
-                    <div class="px-6 py-4 flex items-center space-x-4">
-                        <div class="h-4 bg-gray-200 rounded w-1/4"></div>
-                        <div class="h-4 bg-gray-200 rounded w-1/6"></div>
-                        <div class="h-4 bg-gray-200 rounded w-1/6"></div>
-                        <div class="h-4 bg-gray-200 rounded w-1/6"></div>
+                            <!-- Amount -->
+                            <div class="text-2xl font-bold text-gray-900 mb-4">
+                                ${{ "%.2f"|format(expense.amount) }}
+                            </div>
+
+                            <!-- Details -->
+                            <div class="space-y-2 text-sm text-gray-600">
+                                <div class="flex items-center">
+                                    <svg class="mr-2 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0h6m-6 0l-1 12a2 2 0 002 2h6a2 2 0 002-2L15 7"></path>
+                                    </svg>
+                                    {{ expense.category }}
+                                </div>
+                                <div class="flex items-center">
+                                    <svg class="mr-2 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0h6m-6 0l-1 12a2 2 0 002 2h6a2 2 0 002-2L15 7"></path>
+                                    </svg>
+                                    {{ expense.date }}
+                                </div>
+                                <div class="flex items-center">
+                                    <svg class="mr-2 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                    </svg>
+                                    by {{ expense.created_by.first_name }} {{ expense.created_by.last_name }}
+                                </div>
+                                {% if expense.description %}
+                                    <div class="mt-2 text-gray-700">
+                                        {{ expense.description[:100] }}{% if expense.description|length > 100 %}...{% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="mt-4 flex justify-end space-x-2">
+                                <button 
+                                    class="text-indigo-600 hover:text-indigo-500 text-sm font-medium"
+                                    onclick="viewExpenseDetails('{{ expense.id }}')"
+                                >
+                                    View Details
+                                </button>
+                                <button 
+                                    class="text-gray-600 hover:text-gray-500 text-sm font-medium"
+                                    onclick="editExpense('{{ expense.id }}')"
+                                >
+                                    Edit
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="px-6 py-4 flex items-center space-x-4">
-                        <div class="h-4 bg-gray-200 rounded w-1/4"></div>
-                        <div class="h-4 bg-gray-200 rounded w-1/6"></div>
-                        <div class="h-4 bg-gray-200 rounded w-1/6"></div>
-                        <div class="h-4 bg-gray-200 rounded w-1/6"></div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <!-- Loading state when no initial data -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-white shadow rounded-lg p-6 animate-pulse">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div class="h-6 bg-gray-200 rounded w-16"></div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+                        <div class="h-3 bg-gray-200 rounded w-2/3"></div>
+                    </div>
+                </div>
+                <div class="bg-white shadow rounded-lg p-6 animate-pulse">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div class="h-6 bg-gray-200 rounded w-16"></div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+                        <div class="h-3 bg-gray-200 rounded w-2/3"></div>
+                    </div>
+                </div>
+                <div class="bg-white shadow rounded-lg p-6 animate-pulse">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div class="h-6 bg-gray-200 rounded w-16"></div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+                        <div class="h-3 bg-gray-200 rounded w-2/3"></div>
                     </div>
                 </div>
             </div>
-        </div>
+        {% endif %}
     </div>
 
     <!-- Pagination -->
@@ -298,8 +372,10 @@ function expensesList() {
         },
         
         init() {
-            // Load initial data
-            this.applyFilters();
+            // Load initial data automatically
+            setTimeout(() => {
+                this.applyFilters();
+            }, 100);
         },
         
         applyFilters() {
@@ -318,6 +394,12 @@ function expensesList() {
                     field.value = this.filters[key];
                 }
             });
+            
+            // Also update view_mode field
+            const viewModeField = document.querySelector(`[name="view_mode"]`);
+            if (viewModeField) {
+                viewModeField.value = this.viewMode;
+            }
         },
         
         clearFilters() {
@@ -374,5 +456,43 @@ document.addEventListener('htmx:afterRequest', function(event) {
         }
     }
 });
+
+// Missing expense action functions
+function viewExpenseDetails(expenseId) {
+    // TODO: Implement expense details modal or redirect
+    console.log('Viewing expense details for:', expenseId);
+    // For now, redirect to expense detail page (if it exists)
+    // window.location.href = `/expenses/${expenseId}`;
+    
+    // Or show a simple alert until the detail modal is implemented
+    alert(`Expense details for ID: ${expenseId}\n\nThis feature will be implemented soon!`);
+}
+
+function editExpense(expenseId) {
+    // TODO: Implement expense edit modal or redirect
+    console.log('Editing expense:', expenseId);
+    // For now, redirect to expense edit page (if it exists)
+    // window.location.href = `/expenses/${expenseId}/edit`;
+    
+    // Or show a simple alert until the edit modal is implemented
+    alert(`Edit expense ID: ${expenseId}\n\nThis feature will be implemented soon!`);
+}
+
+// Utility function to show notifications (if not already defined)
+function showNotification(message, type = 'info') {
+    // Simple notification implementation
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 px-4 py-2 rounded-md shadow-lg z-50 ${
+        type === 'success' ? 'bg-green-500 text-white' :
+        type === 'error' ? 'bg-red-500 text-white' :
+        'bg-blue-500 text-white'
+    }`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
 </script>
 {% endblock %} 

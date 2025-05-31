@@ -246,7 +246,7 @@ class ExpenseService(BaseService[Expense, dict, dict]):
                 .options(
                     joinedload(Expense.category),
                     joinedload(Expense.creator),
-                    joinedload(Expense.shares).joinedload(ExpenseShare.user_household),
+                    joinedload(Expense.shares).joinedload(ExpenseShare.user_household).joinedload(UserHousehold.user),
                     joinedload(Expense.household)
                 )
                 .filter(Expense.id == expense_id, Expense.is_active == True)
