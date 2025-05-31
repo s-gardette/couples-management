@@ -1,0 +1,370 @@
+<!-- Household Creation Form -->
+<div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4" x-data="householdCreateForm()">
+    <div class="sm:flex sm:items-start">
+        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 sm:mx-0 sm:h-10 sm:w-10">
+            <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z"></path>
+            </svg>
+        </div>
+        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                Create New Household
+            </h3>
+            <div class="mt-2">
+                <p class="text-sm text-gray-500">
+                    Create a new household to start tracking shared expenses with family or roommates.
+                </p>
+            </div>
+
+            <!-- Progress Steps -->
+            <div class="mt-6">
+                <nav aria-label="Progress">
+                    <ol class="flex items-center">
+                        <li class="relative pr-8 sm:pr-20">
+                            <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                                <div class="h-0.5 w-full bg-gray-200"></div>
+                            </div>
+                            <div class="relative w-8 h-8 flex items-center justify-center rounded-full" :class="currentStep >= 1 ? 'bg-indigo-600' : 'bg-white border-2 border-gray-300'">
+                                <span class="text-sm font-medium" :class="currentStep >= 1 ? 'text-white' : 'text-gray-500'">1</span>
+                            </div>
+                        </li>
+                        <li class="relative pr-8 sm:pr-20">
+                            <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                                <div class="h-0.5 w-full bg-gray-200"></div>
+                            </div>
+                            <div class="relative w-8 h-8 flex items-center justify-center rounded-full" :class="currentStep >= 2 ? 'bg-indigo-600' : 'bg-white border-2 border-gray-300'">
+                                <span class="text-sm font-medium" :class="currentStep >= 2 ? 'text-white' : 'text-gray-500'">2</span>
+                            </div>
+                        </li>
+                        <li class="relative">
+                            <div class="relative w-8 h-8 flex items-center justify-center rounded-full" :class="currentStep >= 3 ? 'bg-indigo-600' : 'bg-white border-2 border-gray-300'">
+                                <span class="text-sm font-medium" :class="currentStep >= 3 ? 'text-white' : 'text-gray-500'">3</span>
+                            </div>
+                        </li>
+                    </ol>
+                </nav>
+            </div>
+
+            <!-- Form -->
+            <form 
+                class="mt-6 space-y-6"
+                hx-post="/api/households"
+                hx-ext="json-enc"
+                hx-trigger="submit"
+                hx-target="this"
+                hx-swap="outerHTML"
+                @submit.prevent="submitForm()"
+            >
+                <!-- Step 1: Basic Information -->
+                <div x-show="currentStep === 1" x-transition>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="name" class="block text-sm font-medium text-gray-700">
+                                Household Name *
+                            </label>
+                            <div class="mt-1">
+                                <input 
+                                    type="text" 
+                                    name="name" 
+                                    id="name" 
+                                    x-model="form.name"
+                                    @input="validateField('name')"
+                                    required
+                                    class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                    placeholder="e.g., Smith Family, Apartment 4B"
+                                >
+                                <p x-show="errors.name" x-text="errors.name" class="mt-1 text-sm text-red-600"></p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="description" class="block text-sm font-medium text-gray-700">
+                                Description
+                            </label>
+                            <div class="mt-1">
+                                <textarea 
+                                    name="description" 
+                                    id="description" 
+                                    rows="3"
+                                    x-model="form.description"
+                                    class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                    placeholder="Optional description of your household"
+                                ></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Settings -->
+                <div x-show="currentStep === 2" x-transition>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">
+                                Default Currency
+                            </label>
+                            <div class="mt-1">
+                                <select 
+                                    name="currency" 
+                                    x-model="form.settings.default_currency"
+                                    class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                >
+                                    <option value="USD">USD - US Dollar</option>
+                                    <option value="EUR">EUR - Euro</option>
+                                    <option value="GBP">GBP - British Pound</option>
+                                    <option value="CAD">CAD - Canadian Dollar</option>
+                                    <option value="AUD">AUD - Australian Dollar</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">
+                                Default Split Method
+                            </label>
+                            <div class="mt-1">
+                                <select 
+                                    name="split_method" 
+                                    x-model="form.settings.default_split_method"
+                                    class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                >
+                                    <option value="equal">Equal Split</option>
+                                    <option value="custom">Custom Split</option>
+                                    <option value="percentage">Percentage Split</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start">
+                            <div class="flex items-center h-5">
+                                <input 
+                                    id="auto_approve_expenses" 
+                                    name="auto_approve_expenses" 
+                                    type="checkbox"
+                                    x-model="form.settings.auto_approve_expenses"
+                                    class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                                >
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="auto_approve_expenses" class="font-medium text-gray-700">
+                                    Auto-approve expenses
+                                </label>
+                                <p class="text-gray-500">Automatically approve expenses without requiring member approval.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start">
+                            <div class="flex items-center h-5">
+                                <input 
+                                    id="allow_member_invites" 
+                                    name="allow_member_invites" 
+                                    type="checkbox"
+                                    x-model="form.settings.allow_member_invites"
+                                    class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                                >
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="allow_member_invites" class="font-medium text-gray-700">
+                                    Allow member invites
+                                </label>
+                                <p class="text-gray-500">Allow household members to invite new people.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Review -->
+                <div x-show="currentStep === 3" x-transition>
+                    <div class="space-y-4">
+                        <h4 class="text-lg font-medium text-gray-900">Review Your Household</h4>
+                        
+                        <div class="bg-gray-50 rounded-lg p-4 space-y-3">
+                            <div>
+                                <span class="text-sm font-medium text-gray-500">Name:</span>
+                                <span class="ml-2 text-sm text-gray-900" x-text="form.name"></span>
+                            </div>
+                            <div x-show="form.description">
+                                <span class="text-sm font-medium text-gray-500">Description:</span>
+                                <span class="ml-2 text-sm text-gray-900" x-text="form.description"></span>
+                            </div>
+                            <div>
+                                <span class="text-sm font-medium text-gray-500">Currency:</span>
+                                <span class="ml-2 text-sm text-gray-900" x-text="form.settings.default_currency"></span>
+                            </div>
+                            <div>
+                                <span class="text-sm font-medium text-gray-500">Split Method:</span>
+                                <span class="ml-2 text-sm text-gray-900" x-text="form.settings.default_split_method"></span>
+                            </div>
+                            <div>
+                                <span class="text-sm font-medium text-gray-500">Auto-approve:</span>
+                                <span class="ml-2 text-sm text-gray-900" x-text="form.settings.auto_approve_expenses ? 'Yes' : 'No'"></span>
+                            </div>
+                            <div>
+                                <span class="text-sm font-medium text-gray-500">Member Invites:</span>
+                                <span class="ml-2 text-sm text-gray-900" x-text="form.settings.allow_member_invites ? 'Allowed' : 'Admin Only'"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Messages -->
+                <div x-show="Object.keys(errors).length > 0" class="rounded-md bg-red-50 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">
+                                Please fix the following errors:
+                            </h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <ul class="list-disc pl-5 space-y-1">
+                                    <template x-for="(error, field) in errors" :key="field">
+                                        <li x-text="error"></li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+        <button 
+            type="button"
+            @click="nextStep()"
+            x-show="currentStep < 3"
+            :disabled="!canProceed()"
+            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+            Next
+        </button>
+        <button 
+            type="submit"
+            @click="submitForm()"
+            x-show="currentStep === 3"
+            :disabled="isSubmitting"
+            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+            <span x-show="!isSubmitting">Create Household</span>
+            <span x-show="isSubmitting" class="flex items-center">
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Creating...
+            </span>
+        </button>
+        <button 
+            type="button"
+            @click="previousStep()"
+            x-show="currentStep > 1"
+            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+        >
+            Previous
+        </button>
+        <button 
+            type="button"
+            @click="$dispatch('close-modal')"
+            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+        >
+            Cancel
+        </button>
+    </div>
+</div>
+
+<script>
+function householdCreateForm() {
+    return {
+        currentStep: 1,
+        isSubmitting: false,
+        form: {
+            name: '',
+            description: '',
+            settings: {
+                default_currency: 'USD',
+                default_split_method: 'equal',
+                auto_approve_expenses: false,
+                allow_member_invites: true
+            }
+        },
+        errors: {},
+        
+        validateField(field) {
+            // Clear previous error
+            delete this.errors[field];
+            
+            // Validate name
+            if (field === 'name') {
+                if (!this.form.name.trim()) {
+                    this.errors.name = 'Household name is required';
+                } else if (this.form.name.length < 2) {
+                    this.errors.name = 'Household name must be at least 2 characters';
+                } else if (this.form.name.length > 100) {
+                    this.errors.name = 'Household name must be less than 100 characters';
+                }
+            }
+        },
+        
+        canProceed() {
+            if (this.currentStep === 1) {
+                return this.form.name.trim() && !this.errors.name;
+            }
+            return true;
+        },
+        
+        nextStep() {
+            if (this.canProceed() && this.currentStep < 3) {
+                this.currentStep++;
+            }
+        },
+        
+        previousStep() {
+            if (this.currentStep > 1) {
+                this.currentStep--;
+            }
+        },
+        
+        async submitForm() {
+            this.isSubmitting = true;
+            this.errors = {};
+            
+            try {
+                const response = await fetch('/api/households', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + AuthUtils.getAccessToken()
+                    },
+                    body: JSON.stringify(this.form)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Success - trigger event and close modal
+                    document.dispatchEvent(new CustomEvent('householdCreated', { detail: data }));
+                    this.$dispatch('close-modal');
+                } else {
+                    // Handle validation errors
+                    if (data.detail && typeof data.detail === 'object') {
+                        this.errors = data.detail;
+                    } else {
+                        this.errors.general = data.detail || 'Failed to create household';
+                    }
+                }
+            } catch (error) {
+                console.error('Error creating household:', error);
+                this.errors.general = 'Network error. Please try again.';
+            } finally {
+                this.isSubmitting = false;
+            }
+        }
+    }
+}
+</script> 

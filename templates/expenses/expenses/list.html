@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+
+{% block title %}Expenses{% if household %} - {{ household.name }}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="expensesList()">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">
+                Expenses
+                {% if household %}
+                <span class="text-gray-500">- {{ household.name }}</span>
+                {% endif %}
+            </h1>
+            <p class="mt-2 text-sm text-gray-600">Track and manage your household expenses</p>
+        </div>
+        <div class="mt-4 sm:mt-0 flex space-x-3">
+            <div class="flex rounded-md shadow-sm">
+                <button 
+                    @click="viewMode = 'cards'"
+                    :class="viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                    class="relative inline-flex items-center px-4 py-2 rounded-l-md border border-gray-300 text-sm font-medium focus:z-10 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14-7H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2z"></path>
+                    </svg>
+                    <span class="ml-2">Cards</span>
+                </button>
+                <button 
+                    @click="viewMode = 'table'"
+                    :class="viewMode === 'table' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                    class="relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-300 border-l-0 text-sm font-medium focus:z-10 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 6h18m-9 8h9"></path>
+                    </svg>
+                    <span class="ml-2">Table</span>
+                </button>
+            </div>
+            <a 
+                href="{% if household %}/households/{{ household.id }}/expenses/create{% else %}/expenses/create{% endif %}"
+                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+                <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                Add Expense
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="bg-white shadow rounded-lg p-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Search -->
+            <div class="lg:col-span-2">
+                <label for="search" class="sr-only">Search expenses</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                    <input 
+                        id="search" 
+                        name="search" 
+                        type="text" 
+                        placeholder="Search expenses..."
+                        x-model="filters.search"
+                        @input.debounce.300ms="applyFilters()"
+                        class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    >
+                </div>
+            </div>
+
+            <!-- Category Filter -->
+            <div>
+                <label for="category" class="sr-only">Category</label>
+                <select 
+                    id="category"
+                    name="category" 
+                    x-model="filters.category"
+                    @change="applyFilters()"
+                    class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                >
+                    <option value="">All Categories</option>
+                    <option value="food">Food & Dining</option>
+                    <option value="transportation">Transportation</option>
+                    <option value="utilities">Utilities</option>
+                    <option value="entertainment">Entertainment</option>
+                    <option value="shopping">Shopping</option>
+                    <option value="healthcare">Healthcare</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <!-- Date Range -->
+            <div>
+                <label for="date_range" class="sr-only">Date Range</label>
+                <select 
+                    id="date_range"
+                    name="date_range" 
+                    x-model="filters.dateRange"
+                    @change="applyFilters()"
+                    class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                >
+                    <option value="">All Time</option>
+                    <option value="today">Today</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                    <option value="quarter">This Quarter</option>
+                    <option value="year">This Year</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Advanced Filters Toggle -->
+        <div class="mt-4">
+            <button 
+                @click="showAdvancedFilters = !showAdvancedFilters"
+                class="text-sm text-indigo-600 hover:text-indigo-500 flex items-center"
+            >
+                <span x-text="showAdvancedFilters ? 'Hide' : 'Show'"></span>
+                <span class="ml-1">Advanced Filters</span>
+                <svg class="ml-1 h-4 w-4 transform transition-transform" :class="showAdvancedFilters ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Advanced Filters -->
+        <div x-show="showAdvancedFilters" x-transition class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Amount Range -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Amount Range</label>
+                <div class="flex space-x-2">
+                    <input 
+                        type="number" 
+                        placeholder="Min"
+                        x-model="filters.minAmount"
+                        @input.debounce.500ms="applyFilters()"
+                        class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                    >
+                    <input 
+                        type="number" 
+                        placeholder="Max"
+                        x-model="filters.maxAmount"
+                        @input.debounce.500ms="applyFilters()"
+                        class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                    >
+                </div>
+            </div>
+
+            <!-- Payment Status -->
+            <div>
+                <label for="payment_status" class="block text-sm font-medium text-gray-700 mb-1">Payment Status</label>
+                <select 
+                    id="payment_status"
+                    x-model="filters.paymentStatus"
+                    @change="applyFilters()"
+                    class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                >
+                    <option value="">All</option>
+                    <option value="paid">Fully Paid</option>
+                    <option value="partial">Partially Paid</option>
+                    <option value="unpaid">Unpaid</option>
+                </select>
+            </div>
+
+            <!-- Created By -->
+            <div>
+                <label for="created_by" class="block text-sm font-medium text-gray-700 mb-1">Created By</label>
+                <select 
+                    id="created_by"
+                    x-model="filters.createdBy"
+                    @change="applyFilters()"
+                    class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                >
+                    <option value="">Anyone</option>
+                    <option value="me">Me</option>
+                    <!-- Dynamic options will be loaded -->
+                </select>
+            </div>
+
+            <!-- Sort By -->
+            <div>
+                <label for="sort_by" class="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+                <select 
+                    id="sort_by"
+                    x-model="filters.sortBy"
+                    @change="applyFilters()"
+                    class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                >
+                    <option value="date_desc">Date (Newest First)</option>
+                    <option value="date_asc">Date (Oldest First)</option>
+                    <option value="amount_desc">Amount (Highest First)</option>
+                    <option value="amount_asc">Amount (Lowest First)</option>
+                    <option value="title_asc">Title (A-Z)</option>
+                    <option value="title_desc">Title (Z-A)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Clear Filters -->
+        <div class="mt-4 flex justify-between items-center">
+            <button 
+                @click="clearFilters()"
+                class="text-sm text-gray-600 hover:text-gray-500"
+            >
+                Clear All Filters
+            </button>
+            <div class="text-sm text-gray-500">
+                <span x-text="totalExpenses"></span> expenses found
+            </div>
+        </div>
+    </div>
+
+    <!-- Expenses List -->
+    <div 
+        id="expenses-container"
+        hx-get="{% if household %}/api/households/{{ household.id }}/expenses{% else %}/api/expenses{% endif %}"
+        hx-trigger="load, applyFilters from:body"
+        hx-target="#expenses-container"
+        hx-swap="innerHTML"
+        hx-include="[name='search'], [name='category'], [name='date_range'], [name='payment_status'], [name='created_by'], [name='sort_by']"
+    >
+        <!-- Loading state -->
+        <div x-show="viewMode === 'cards'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="bg-white shadow rounded-lg p-6 animate-pulse">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                    <div class="h-6 bg-gray-200 rounded w-16"></div>
+                </div>
+                <div class="space-y-2">
+                    <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+                    <div class="h-3 bg-gray-200 rounded w-2/3"></div>
+                </div>
+            </div>
+            <div class="bg-white shadow rounded-lg p-6 animate-pulse">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                    <div class="h-6 bg-gray-200 rounded w-16"></div>
+                </div>
+                <div class="space-y-2">
+                    <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+                    <div class="h-3 bg-gray-200 rounded w-2/3"></div>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="viewMode === 'table'" class="bg-white shadow rounded-lg overflow-hidden">
+            <div class="animate-pulse">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <div class="h-4 bg-gray-200 rounded w-1/4"></div>
+                </div>
+                <div class="divide-y divide-gray-200">
+                    <div class="px-6 py-4 flex items-center space-x-4">
+                        <div class="h-4 bg-gray-200 rounded w-1/4"></div>
+                        <div class="h-4 bg-gray-200 rounded w-1/6"></div>
+                        <div class="h-4 bg-gray-200 rounded w-1/6"></div>
+                        <div class="h-4 bg-gray-200 rounded w-1/6"></div>
+                    </div>
+                    <div class="px-6 py-4 flex items-center space-x-4">
+                        <div class="h-4 bg-gray-200 rounded w-1/4"></div>
+                        <div class="h-4 bg-gray-200 rounded w-1/6"></div>
+                        <div class="h-4 bg-gray-200 rounded w-1/6"></div>
+                        <div class="h-4 bg-gray-200 rounded w-1/6"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div id="pagination-container" class="flex items-center justify-between">
+        <!-- Pagination will be loaded with expenses -->
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function expensesList() {
+    return {
+        viewMode: 'cards',
+        showAdvancedFilters: false,
+        totalExpenses: 0,
+        filters: {
+            search: '',
+            category: '',
+            dateRange: '',
+            minAmount: '',
+            maxAmount: '',
+            paymentStatus: '',
+            createdBy: '',
+            sortBy: 'date_desc'
+        },
+        
+        init() {
+            // Load initial data
+            this.applyFilters();
+        },
+        
+        applyFilters() {
+            // Update hidden form fields
+            this.updateFormFields();
+            
+            // Trigger HTMX request
+            htmx.trigger(document.body, 'applyFilters');
+        },
+        
+        updateFormFields() {
+            // Update form fields with current filter values
+            Object.keys(this.filters).forEach(key => {
+                const field = document.querySelector(`[name="${key}"]`);
+                if (field) {
+                    field.value = this.filters[key];
+                }
+            });
+        },
+        
+        clearFilters() {
+            // Reset all filters
+            this.filters = {
+                search: '',
+                category: '',
+                dateRange: '',
+                minAmount: '',
+                maxAmount: '',
+                paymentStatus: '',
+                createdBy: '',
+                sortBy: 'date_desc'
+            };
+            
+            // Apply cleared filters
+            this.applyFilters();
+        },
+        
+        toggleViewMode() {
+            this.viewMode = this.viewMode === 'cards' ? 'table' : 'cards';
+            // Re-render with new view mode
+            this.applyFilters();
+        }
+    }
+}
+
+// Handle expense actions
+document.addEventListener('expenseUpdated', function(event) {
+    // Refresh the expenses list
+    htmx.trigger(document.body, 'applyFilters');
+    showNotification('Expense updated successfully!', 'success');
+});
+
+document.addEventListener('expenseDeleted', function(event) {
+    // Refresh the expenses list
+    htmx.trigger(document.body, 'applyFilters');
+    showNotification('Expense deleted successfully!', 'success');
+});
+
+document.addEventListener('paymentMarked', function(event) {
+    // Refresh the expenses list
+    htmx.trigger(document.body, 'applyFilters');
+    showNotification('Payment status updated!', 'success');
+});
+
+// Handle HTMX response to update total count
+document.addEventListener('htmx:afterRequest', function(event) {
+    if (event.detail.target.id === 'expenses-container') {
+        // Extract total count from response headers or data
+        const totalHeader = event.detail.xhr.getResponseHeader('X-Total-Count');
+        if (totalHeader) {
+            Alpine.store('expensesList').totalExpenses = parseInt(totalHeader);
+        }
+    }
+});
+</script>
+{% endblock %} 

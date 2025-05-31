@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+
+{% block title %}{{ household.name }} - Household Details{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="householdDetail('{{ household.id }}')">
+    <!-- Header -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex-1">
+                    <h1 class="text-3xl font-bold text-gray-900">{{ household.name }}</h1>
+                    {% if household.description %}
+                    <p class="mt-2 text-sm text-gray-600">{{ household.description }}</p>
+                    {% endif %}
+                    <div class="mt-4 flex items-center space-x-6">
+                        <div class="flex items-center text-sm text-gray-500">
+                            <svg class="mr-1.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                            {{ household.members|length }} members
+                        </div>
+                        <div class="flex items-center text-sm text-gray-500">
+                            <svg class="mr-1.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0h6m-6 0l-1 12a2 2 0 002 2h6a2 2 0 002-2L15 7"></path>
+                            </svg>
+                            Created {{ household.created_at|date:"M d, Y" }}
+                        </div>
+                        {% if household.user_role == 'admin' %}
+                        <div class="flex items-center text-sm text-indigo-600">
+                            <svg class="mr-1.5 h-5 w-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                            </svg>
+                            Admin
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mt-4 sm:mt-0 flex space-x-3">
+                    {% if household.user_role == 'admin' %}
+                    <button 
+                        @click="showInviteModal = true"
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                        <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Invite Members
+                    </button>
+                    <button 
+                        @click="showSettingsModal = true"
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                        <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        Settings
+                    </button>
+                    {% endif %}
+                    <a 
+                        href="/households/{{ household.id }}/expenses/create"
+                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                        <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Add Expense
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Total Expenses</dt>
+                            <dd class="text-lg font-medium text-gray-900" id="total-expenses">$0.00</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-yellow-500 rounded-md flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Pending Payments</dt>
+                            <dd class="text-lg font-medium text-gray-900" id="pending-payments">$0.00</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">This Month</dt>
+                            <dd class="text-lg font-medium text-gray-900" id="monthly-expenses">$0.00</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-red-500 rounded-md flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Your Balance</dt>
+                            <dd class="text-lg font-medium" id="user-balance" :class="userBalance >= 0 ? 'text-green-600' : 'text-red-600'">$0.00</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Recent Expenses -->
+        <div class="lg:col-span-2">
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">Recent Expenses</h3>
+                        <a href="/households/{{ household.id }}/expenses" class="text-sm text-indigo-600 hover:text-indigo-500">
+                            View all
+                        </a>
+                    </div>
+                    
+                    <div 
+                        id="recent-expenses"
+                        hx-get="/api/households/{{ household.id }}/expenses?limit=5"
+                        hx-trigger="load, refreshExpenses from:body"
+                        hx-target="#recent-expenses"
+                        hx-swap="innerHTML"
+                    >
+                        <!-- Recent expenses will be loaded here -->
+                        <div class="space-y-4">
+                            <div class="animate-pulse flex space-x-4">
+                                <div class="rounded-full bg-gray-200 h-10 w-10"></div>
+                                <div class="flex-1 space-y-2 py-1">
+                                    <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                                    <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+                                </div>
+                            </div>
+                            <div class="animate-pulse flex space-x-4">
+                                <div class="rounded-full bg-gray-200 h-10 w-10"></div>
+                                <div class="flex-1 space-y-2 py-1">
+                                    <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                                    <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Members & Quick Actions -->
+        <div class="space-y-6">
+            <!-- Members -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">Members</h3>
+                        {% if household.user_role == 'admin' %}
+                        <button 
+                            @click="showMembersModal = true"
+                            class="text-sm text-indigo-600 hover:text-indigo-500"
+                        >
+                            Manage
+                        </button>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="space-y-3">
+                        {% for member in household.members %}
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-8 w-8">
+                                    {% if member.user.avatar_url %}
+                                    <img class="h-8 w-8 rounded-full" src="{{ member.user.avatar_url }}" alt="{{ member.user.first_name }}">
+                                    {% else %}
+                                    <div class="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
+                                        <span class="text-sm font-medium text-gray-700">{{ member.user.first_name|first }}{{ member.user.last_name|first }}</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="ml-3">
+                                    <p class="text-sm font-medium text-gray-900">
+                                        {% if member.nickname %}{{ member.nickname }}{% else %}{{ member.user.first_name }} {{ member.user.last_name }}{% endif %}
+                                    </p>
+                                    <p class="text-xs text-gray-500">{{ member.role|title }}</p>
+                                </div>
+                            </div>
+                            {% if member.role == 'admin' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                Admin
+                            </span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Quick Actions</h3>
+                    
+                    <div class="space-y-3">
+                        <a 
+                            href="/households/{{ household.id }}/expenses/create"
+                            class="w-full flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                            <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Add Expense
+                        </a>
+                        
+                        <a 
+                            href="/households/{{ household.id }}/analytics"
+                            class="w-full flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                            <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                            View Analytics
+                        </a>
+                        
+                        <button 
+                            @click="showBalancesModal = true"
+                            class="w-full flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                            <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                            </svg>
+                            View Balances
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals will be loaded here via HTMX -->
+    <div id="modal-container"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function householdDetail(householdId) {
+    return {
+        householdId: householdId,
+        showInviteModal: false,
+        showSettingsModal: false,
+        showMembersModal: false,
+        showBalancesModal: false,
+        userBalance: 0,
+        
+        init() {
+            this.loadHouseholdStats();
+        },
+        
+        loadHouseholdStats() {
+            // Load household statistics
+            fetch(`/api/households/${this.householdId}/stats`, {
+                headers: {
+                    'Authorization': 'Bearer ' + AuthUtils.getAccessToken()
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.total_expenses) {
+                    document.getElementById('total-expenses').textContent = '$' + data.total_expenses.toFixed(2);
+                }
+                if (data.pending_payments) {
+                    document.getElementById('pending-payments').textContent = '$' + data.pending_payments.toFixed(2);
+                }
+                if (data.monthly_expenses) {
+                    document.getElementById('monthly-expenses').textContent = '$' + data.monthly_expenses.toFixed(2);
+                }
+                if (data.user_balance !== undefined) {
+                    this.userBalance = data.user_balance;
+                    const balanceElement = document.getElementById('user-balance');
+                    balanceElement.textContent = '$' + Math.abs(data.user_balance).toFixed(2);
+                    if (data.user_balance < 0) {
+                        balanceElement.textContent = '-' + balanceElement.textContent;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error loading household stats:', error);
+            });
+        },
+        
+        refreshExpenses() {
+            htmx.trigger(document.body, 'refreshExpenses');
+            this.loadHouseholdStats();
+        }
+    }
+}
+
+// Handle successful actions
+document.addEventListener('expenseCreated', function(event) {
+    // Refresh expenses and stats
+    htmx.trigger(document.body, 'refreshExpenses');
+    showNotification('Expense created successfully!', 'success');
+});
+
+document.addEventListener('memberInvited', function(event) {
+    // Refresh page to show new member
+    window.location.reload();
+});
+
+document.addEventListener('settingsUpdated', function(event) {
+    // Refresh page to show updated settings
+    window.location.reload();
+});
+</script>
+{% endblock %} 
