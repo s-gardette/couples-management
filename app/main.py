@@ -17,6 +17,12 @@ from app.modules.auth.routers.admin import router as admin_router
 from app.modules.auth.dependencies import require_authentication, get_current_user_optional, get_current_user_from_cookie_or_header
 from app.modules.auth.utils.startup import initialize_auth_system
 from app.modules.auth.schemas.admin import AdminAccessRestrictedResponse
+from app.modules.expenses.routers import (
+    households_router,
+    expenses_router,
+    categories_router,
+    analytics_router,
+)
 
 
 @asynccontextmanager
@@ -74,12 +80,24 @@ if settings.require_authentication_for_all:
     app.include_router(health.router, prefix="/health", tags=["health"], dependencies=[Depends(require_authentication)])
     app.include_router(users_router, prefix="/api", dependencies=[Depends(require_authentication)])
     app.include_router(admin_router, prefix="/api", dependencies=[Depends(require_authentication)])
+    
+    # Expenses module routers
+    app.include_router(households_router, prefix="/api", dependencies=[Depends(require_authentication)])
+    app.include_router(expenses_router, prefix="/api", dependencies=[Depends(require_authentication)])
+    app.include_router(categories_router, prefix="/api", dependencies=[Depends(require_authentication)])
+    app.include_router(analytics_router, prefix="/api", dependencies=[Depends(require_authentication)])
 else:
     # Normal routing (for development)
     app.include_router(health.router, prefix="/health", tags=["health"])
     app.include_router(auth_router, prefix="/api")
     app.include_router(users_router, prefix="/api")
     app.include_router(admin_router, prefix="/api")
+    
+    # Expenses module routers (development mode)
+    app.include_router(households_router, prefix="/api")
+    app.include_router(expenses_router, prefix="/api")
+    app.include_router(categories_router, prefix="/api")
+    app.include_router(analytics_router, prefix="/api")
 
 
 # Access restricted page (only public endpoint)

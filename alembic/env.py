@@ -14,6 +14,8 @@ from app.config import settings
 from app.database import Base
 
 # Import all models to ensure they're registered with metadata
+from app.modules.auth.models import User, EmailVerificationToken, PasswordResetToken, UserSession, PasswordHistory
+from app.modules.expenses.models import Household, UserHousehold, Category, Expense, ExpenseShare
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
