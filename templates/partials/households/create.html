@@ -1,0 +1,146 @@
+<!-- Household Creation Form Partial -->
+<div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+    <div class="sm:flex sm:items-start">
+        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 sm:mx-0 sm:h-10 sm:w-10">
+            <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0V7a2 2 0 012-2h4a2 2 0 012 2v0"></path>
+            </svg>
+        </div>
+        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                Create New Household
+            </h3>
+            <div class="mt-2">
+                <p class="text-sm text-gray-500">
+                    Create a new household to start tracking shared expenses with family, roommates, or friends.
+                </p>
+            </div>
+            
+            <form 
+                class="mt-6 space-y-6"
+                hx-post="/api/households"
+                hx-headers='{"Content-Type": "application/json"}'
+                hx-ext="json-enc"
+                hx-indicator="#create-loading"
+                @submit="createHousehold"
+                x-data="householdCreateForm()"
+            >
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700">
+                        Household Name *
+                    </label>
+                    <div class="mt-1">
+                        <input 
+                            id="name" 
+                            name="name" 
+                            type="text" 
+                            required 
+                            x-model="form.name"
+                            class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                            placeholder="e.g., The Smith Family, Apartment 3B, etc."
+                        >
+                    </div>
+                </div>
+
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700">
+                        Description
+                    </label>
+                    <div class="mt-1">
+                        <textarea 
+                            id="description" 
+                            name="description" 
+                            rows="3"
+                            x-model="form.description"
+                            class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                            placeholder="Optional description for your household..."
+                        ></textarea>
+                    </div>
+                    <p class="mt-2 text-sm text-gray-500">
+                        A brief description to help identify this household.
+                    </p>
+                </div>
+
+                <div>
+                    <label for="currency" class="block text-sm font-medium text-gray-700">
+                        Currency
+                    </label>
+                    <div class="mt-1">
+                        <select 
+                            id="currency" 
+                            name="currency"
+                            x-model="form.currency"
+                            class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                        >
+                            <option value="USD">USD - US Dollar ($)</option>
+                            <option value="EUR">EUR - Euro (€)</option>
+                            <option value="GBP">GBP - British Pound (£)</option>
+                            <option value="CAD">CAD - Canadian Dollar (C$)</option>
+                            <option value="AUD">AUD - Australian Dollar (A$)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button 
+                        type="submit"
+                        :disabled="!form.name.trim()"
+                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <span id="create-loading" class="htmx-indicator">
+                            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Creating...
+                        </span>
+                        <span class="htmx-indicator-none">
+                            Create Household
+                        </span>
+                    </button>
+                    <button 
+                        type="button"
+                        @click="closeModal()"
+                        class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function householdCreateForm() {
+    return {
+        form: {
+            name: '',
+            description: '',
+            currency: 'USD'
+        },
+        
+        createHousehold() {
+            // Form will be submitted via HTMX
+        },
+        
+        closeModal() {
+            // Trigger close event
+            this.$dispatch('close-modal');
+        }
+    }
+}
+
+// Handle successful creation
+document.addEventListener('htmx:afterRequest', function(event) {
+    if (event.detail.xhr.status === 201 && event.detail.target.tagName === 'FORM') {
+        // Close modal and refresh households list
+        document.dispatchEvent(new CustomEvent('householdCreated'));
+        // Reset form
+        Alpine.store('householdCreateForm', {
+            form: { name: '', description: '', currency: 'USD' }
+        });
+    }
+});
+</script> 

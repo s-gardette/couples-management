@@ -6,8 +6,8 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import List, Optional
 
-from sqlalchemy import Column, String, Text, Date, DECIMAL, ForeignKey, JSON
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, Text, Date, DECIMAL, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import relationship
 
 from app.core.models.base import BaseModel
@@ -83,11 +83,11 @@ class Expense(BaseModel, ActiveMixin):
         nullable=True
     )
     
-    # Tags for additional categorization (using JSON for database compatibility)
+    # Tags for additional categorization (using PostgreSQL ARRAY)
     tags = Column(
-        JSON,
+        ARRAY(String),
         nullable=True,
-        default=list
+        default=None
     )
     
     # Relationships

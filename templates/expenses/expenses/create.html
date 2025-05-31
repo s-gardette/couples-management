@@ -1,471 +1,505 @@
-<!-- Expense Creation Form -->
-<div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4" x-data="expenseCreateForm()">
-    <div class="sm:flex sm:items-start">
-        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10">
-            <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-        </div>
-        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                Add New Expense
-            </h3>
-            <div class="mt-2">
-                <p class="text-sm text-gray-500">
-                    Create a new expense and split it among household members.
-                </p>
-            </div>
+{% extends "base.html" %}
 
-            <!-- Progress Steps -->
-            <div class="mt-6">
-                <nav aria-label="Progress">
-                    <ol class="flex items-center">
-                        <li class="relative pr-8 sm:pr-20">
-                            <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                                <div class="h-0.5 w-full bg-gray-200"></div>
-                            </div>
-                            <div class="relative w-8 h-8 flex items-center justify-center rounded-full" :class="currentStep >= 1 ? 'bg-green-600' : 'bg-white border-2 border-gray-300'">
-                                <span class="text-sm font-medium" :class="currentStep >= 1 ? 'text-white' : 'text-gray-500'">1</span>
-                            </div>
-                        </li>
-                        <li class="relative pr-8 sm:pr-20">
-                            <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                                <div class="h-0.5 w-full bg-gray-200"></div>
-                            </div>
-                            <div class="relative w-8 h-8 flex items-center justify-center rounded-full" :class="currentStep >= 2 ? 'bg-green-600' : 'bg-white border-2 border-gray-300'">
-                                <span class="text-sm font-medium" :class="currentStep >= 2 ? 'text-white' : 'text-gray-500'">2</span>
-                            </div>
-                        </li>
-                        <li class="relative">
-                            <div class="relative w-8 h-8 flex items-center justify-center rounded-full" :class="currentStep >= 3 ? 'bg-green-600' : 'bg-white border-2 border-gray-300'">
-                                <span class="text-sm font-medium" :class="currentStep >= 3 ? 'text-white' : 'text-gray-500'">3</span>
-                            </div>
-                        </li>
-                    </ol>
-                </nav>
-                <div class="mt-2 text-sm text-gray-600">
-                    <span x-show="currentStep === 1">Basic Information</span>
-                    <span x-show="currentStep === 2">Split & Category</span>
-                    <span x-show="currentStep === 3">Review & Submit</span>
+{% block title %}Create Expense{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div class="bg-white shadow rounded-lg">
+        <!-- Expense Creation Form -->
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4" x-data="expenseCreateForm()">
+            <div class="sm:flex sm:items-start">
+                <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
                 </div>
-            </div>
+                <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                        Add New Expense
+                    </h3>
+                    <div class="mt-2">
+                        <p class="text-sm text-gray-500">
+                            Create a new expense and split it among household members.
+                        </p>
+                    </div>
 
-            <!-- Form -->
-            <form 
-                class="mt-6 space-y-6"
-                @submit.prevent="submitForm()"
-            >
-                <!-- Step 1: Basic Information -->
-                <div x-show="currentStep === 1" x-transition>
-                    <div class="space-y-4">
-                        <div>
-                            <label for="title" class="block text-sm font-medium text-gray-700">
-                                Expense Title *
-                            </label>
-                            <div class="mt-1">
-                                <input 
-                                    type="text" 
-                                    name="title" 
-                                    id="title" 
-                                    x-model="form.title"
-                                    @input="validateField('title')"
-                                    required
-                                    class="shadow-sm focus:ring-green-500 focus:border-green-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                    placeholder="e.g., Grocery Shopping, Dinner at Restaurant"
-                                >
-                                <p x-show="errors.title" x-text="errors.title" class="mt-1 text-sm text-red-600"></p>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="amount" class="block text-sm font-medium text-gray-700">
-                                Amount *
-                            </label>
-                            <div class="mt-1 relative rounded-md shadow-sm">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <span class="text-gray-500 sm:text-sm" x-text="getCurrencySymbol()"></span>
-                                </div>
-                                <input 
-                                    type="number" 
-                                    name="amount" 
-                                    id="amount" 
-                                    step="0.01"
-                                    min="0.01"
-                                    x-model="form.amount"
-                                    @input="validateField('amount')"
-                                    required
-                                    class="focus:ring-green-500 focus:border-green-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
-                                    placeholder="0.00"
-                                >
-                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                    <span class="text-gray-500 sm:text-sm" x-text="form.currency"></span>
-                                </div>
-                            </div>
-                            <p x-show="errors.amount" x-text="errors.amount" class="mt-1 text-sm text-red-600"></p>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label for="currency" class="block text-sm font-medium text-gray-700">
-                                    Currency
-                                </label>
-                                <div class="mt-1">
-                                    <select 
-                                        name="currency" 
-                                        id="currency"
-                                        x-model="form.currency"
-                                        class="shadow-sm focus:ring-green-500 focus:border-green-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                    >
-                                        <option value="USD">USD - US Dollar</option>
-                                        <option value="EUR">EUR - Euro</option>
-                                        <option value="GBP">GBP - British Pound</option>
-                                        <option value="CAD">CAD - Canadian Dollar</option>
-                                        <option value="AUD">AUD - Australian Dollar</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label for="expense_date" class="block text-sm font-medium text-gray-700">
-                                    Date
-                                </label>
-                                <div class="mt-1">
-                                    <input 
-                                        type="date" 
-                                        name="expense_date" 
-                                        id="expense_date" 
-                                        x-model="form.expense_date"
-                                        class="shadow-sm focus:ring-green-500 focus:border-green-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                    >
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="description" class="block text-sm font-medium text-gray-700">
-                                Description
-                            </label>
-                            <div class="mt-1">
-                                <textarea 
-                                    name="description" 
-                                    id="description" 
-                                    rows="3"
-                                    x-model="form.description"
-                                    class="shadow-sm focus:ring-green-500 focus:border-green-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                    placeholder="Optional details about this expense"
-                                ></textarea>
-                            </div>
-                        </div>
-
-                        <!-- Receipt Upload -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">
-                                Receipt (Optional)
-                            </label>
-                            <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                                <div class="space-y-1 text-center">
-                                    <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                                    </svg>
-                                    <div class="flex text-sm text-gray-600">
-                                        <label for="receipt" class="relative cursor-pointer bg-white rounded-md font-medium text-green-600 hover:text-green-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-green-500">
-                                            <span>Upload a file</span>
-                                            <input id="receipt" name="receipt" type="file" class="sr-only" accept="image/*,.pdf" @change="handleReceiptUpload">
-                                        </label>
-                                        <p class="pl-1">or drag and drop</p>
+                    <!-- Progress Steps -->
+                    <div class="mt-6">
+                        <nav aria-label="Progress">
+                            <ol class="flex items-center">
+                                <li class="relative pr-8 sm:pr-20">
+                                    <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                                        <div class="h-0.5 w-full bg-gray-200"></div>
                                     </div>
-                                    <p class="text-xs text-gray-500">PNG, JPG, PDF up to 10MB</p>
-                                </div>
-                            </div>
-                            <div x-show="form.receipt_file" class="mt-2 text-sm text-gray-600">
-                                <span>Selected: </span><span x-text="form.receipt_file?.name"></span>
-                            </div>
+                                    <div class="relative w-8 h-8 flex items-center justify-center rounded-full" :class="currentStep >= 1 ? 'bg-green-600' : 'bg-white border-2 border-gray-300'">
+                                        <span class="text-sm font-medium" :class="currentStep >= 1 ? 'text-white' : 'text-gray-500'">1</span>
+                                    </div>
+                                </li>
+                                <li class="relative pr-8 sm:pr-20">
+                                    <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                                        <div class="h-0.5 w-full bg-gray-200"></div>
+                                    </div>
+                                    <div class="relative w-8 h-8 flex items-center justify-center rounded-full" :class="currentStep >= 2 ? 'bg-green-600' : 'bg-white border-2 border-gray-300'">
+                                        <span class="text-sm font-medium" :class="currentStep >= 2 ? 'text-white' : 'text-gray-500'">2</span>
+                                    </div>
+                                </li>
+                                <li class="relative">
+                                    <div class="relative w-8 h-8 flex items-center justify-center rounded-full" :class="currentStep >= 3 ? 'bg-green-600' : 'bg-white border-2 border-gray-300'">
+                                        <span class="text-sm font-medium" :class="currentStep >= 3 ? 'text-white' : 'text-gray-500'">3</span>
+                                    </div>
+                                </li>
+                            </ol>
+                        </nav>
+                        <div class="mt-2 text-sm text-gray-600">
+                            <span x-show="currentStep === 1">Basic Information</span>
+                            <span x-show="currentStep === 2">Split & Category</span>
+                            <span x-show="currentStep === 3">Review & Submit</span>
                         </div>
                     </div>
-                </div>
 
-                <!-- Step 2: Category & Split -->
-                <div x-show="currentStep === 2" x-transition>
-                    <div class="space-y-4">
-                        <div>
-                            <label for="category_id" class="block text-sm font-medium text-gray-700">
-                                Category
-                            </label>
-                            <div class="mt-1">
-                                <select 
-                                    name="category_id" 
-                                    id="category_id"
-                                    x-model="form.category_id"
-                                    class="shadow-sm focus:ring-green-500 focus:border-green-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                >
-                                    <option value="">Select a category</option>
-                                    <template x-for="category in categories" :key="category.id">
-                                        <option :value="category.id" x-text="category.name"></option>
-                                    </template>
-                                </select>
+                    <!-- Form -->
+                    <form 
+                        class="mt-6 space-y-6"
+                        @submit.prevent="submitForm()"
+                    >
+                        <!-- Step 1: Basic Information -->
+                        <div x-show="currentStep === 1" x-transition>
+                            <div class="space-y-4">
+                                <!-- Household Selection (if multiple households) -->
+                                <div x-show="userHouseholds.length > 1">
+                                    <label for="household_id" class="block text-sm font-medium text-gray-700">
+                                        Household *
+                                    </label>
+                                    <div class="mt-1">
+                                        <select 
+                                            name="household_id" 
+                                            id="household_id"
+                                            x-model="form.household_id"
+                                            @change="onHouseholdChange()"
+                                            required
+                                            class="shadow-sm focus:ring-green-500 focus:border-green-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                        >
+                                            <option value="">Select a household</option>
+                                            <template x-for="household in userHouseholds" :key="household.id">
+                                                <option :value="household.id" x-text="household.name"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                    <p class="mt-1 text-sm text-gray-500">Choose which household this expense belongs to</p>
+                                </div>
+
+                                <div>
+                                    <label for="title" class="block text-sm font-medium text-gray-700">
+                                        Expense Title *
+                                    </label>
+                                    <div class="mt-1">
+                                        <input 
+                                            type="text" 
+                                            name="title" 
+                                            id="title" 
+                                            x-model="form.title"
+                                            @input="validateField('title')"
+                                            required
+                                            class="shadow-sm focus:ring-green-500 focus:border-green-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                            placeholder="e.g., Grocery Shopping, Dinner at Restaurant"
+                                        >
+                                        <p x-show="errors.title" x-text="errors.title" class="mt-1 text-sm text-red-600"></p>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label for="amount" class="block text-sm font-medium text-gray-700">
+                                        Amount *
+                                    </label>
+                                    <div class="mt-1 relative rounded-md shadow-sm">
+                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <span class="text-gray-500 sm:text-sm" x-text="getCurrencySymbol()"></span>
+                                        </div>
+                                        <input 
+                                            type="number" 
+                                            name="amount" 
+                                            id="amount" 
+                                            step="0.01"
+                                            min="0.01"
+                                            x-model="form.amount"
+                                            @input="validateField('amount')"
+                                            required
+                                            class="focus:ring-green-500 focus:border-green-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
+                                            placeholder="0.00"
+                                        >
+                                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                            <span class="text-gray-500 sm:text-sm" x-text="form.currency"></span>
+                                        </div>
+                                    </div>
+                                    <p x-show="errors.amount" x-text="errors.amount" class="mt-1 text-sm text-red-600"></p>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="currency" class="block text-sm font-medium text-gray-700">
+                                            Currency
+                                        </label>
+                                        <div class="mt-1">
+                                            <select 
+                                                name="currency" 
+                                                id="currency"
+                                                x-model="form.currency"
+                                                class="shadow-sm focus:ring-green-500 focus:border-green-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                            >
+                                                <option value="USD">USD - US Dollar</option>
+                                                <option value="EUR">EUR - Euro</option>
+                                                <option value="GBP">GBP - British Pound</option>
+                                                <option value="CAD">CAD - Canadian Dollar</option>
+                                                <option value="AUD">AUD - Australian Dollar</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label for="expense_date" class="block text-sm font-medium text-gray-700">
+                                            Date
+                                        </label>
+                                        <div class="mt-1">
+                                            <input 
+                                                type="date" 
+                                                name="expense_date" 
+                                                id="expense_date" 
+                                                x-model="form.expense_date"
+                                                class="shadow-sm focus:ring-green-500 focus:border-green-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                            >
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label for="description" class="block text-sm font-medium text-gray-700">
+                                        Description
+                                    </label>
+                                    <div class="mt-1">
+                                        <textarea 
+                                            name="description" 
+                                            id="description" 
+                                            rows="3"
+                                            x-model="form.description"
+                                            class="shadow-sm focus:ring-green-500 focus:border-green-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                            placeholder="Optional details about this expense"
+                                        ></textarea>
+                                    </div>
+                                </div>
+
+                                <!-- Receipt Upload -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">
+                                        Receipt (Optional)
+                                    </label>
+                                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                                        <div class="space-y-1 text-center">
+                                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                            </svg>
+                                            <div class="flex text-sm text-gray-600">
+                                                <label for="receipt" class="relative cursor-pointer bg-white rounded-md font-medium text-green-600 hover:text-green-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-green-500">
+                                                    <span>Upload a file</span>
+                                                    <input id="receipt" name="receipt" type="file" class="sr-only" accept="image/*,.pdf" @change="handleReceiptUpload">
+                                                </label>
+                                                <p class="pl-1">or drag and drop</p>
+                                            </div>
+                                            <p class="text-xs text-gray-500">PNG, JPG, PDF up to 10MB</p>
+                                        </div>
+                                    </div>
+                                    <div x-show="form.receipt_file" class="mt-2 text-sm text-gray-600">
+                                        <span>Selected: </span><span x-text="form.receipt_file?.name"></span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-3">
-                                How should this expense be split?
-                            </label>
-                            <div class="space-y-3">
-                                <div class="flex items-center">
-                                    <input 
-                                        id="split_equal" 
-                                        name="split_method" 
-                                        type="radio" 
-                                        value="equal"
-                                        x-model="form.split_method"
-                                        @change="updateSplitMethod()"
-                                        class="focus:ring-green-500 h-4 w-4 text-green-600 border-gray-300"
-                                    >
-                                    <label for="split_equal" class="ml-3 block text-sm font-medium text-gray-700">
-                                        Split equally among all members
+                        <!-- Step 2: Category & Split -->
+                        <div x-show="currentStep === 2" x-transition>
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="category_id" class="block text-sm font-medium text-gray-700">
+                                        Category
                                     </label>
+                                    <div class="mt-1">
+                                        <select 
+                                            name="category_id" 
+                                            id="category_id"
+                                            x-model="form.category_id"
+                                            class="shadow-sm focus:ring-green-500 focus:border-green-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                        >
+                                            <option value="">Select a category</option>
+                                            <template x-for="category in categories" :key="category.id">
+                                                <option :value="category.id" x-text="category.name"></option>
+                                            </template>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div class="flex items-center">
-                                    <input 
-                                        id="split_percentage" 
-                                        name="split_method" 
-                                        type="radio" 
-                                        value="percentage"
-                                        x-model="form.split_method"
-                                        @change="updateSplitMethod()"
-                                        class="focus:ring-green-500 h-4 w-4 text-green-600 border-gray-300"
-                                    >
-                                    <label for="split_percentage" class="ml-3 block text-sm font-medium text-gray-700">
-                                        Split by percentage
-                                    </label>
-                                </div>
-                                <div class="flex items-center">
-                                    <input 
-                                        id="split_custom" 
-                                        name="split_method" 
-                                        type="radio" 
-                                        value="custom"
-                                        x-model="form.split_method"
-                                        @change="updateSplitMethod()"
-                                        class="focus:ring-green-500 h-4 w-4 text-green-600 border-gray-300"
-                                    >
-                                    <label for="split_custom" class="ml-3 block text-sm font-medium text-gray-700">
-                                        Custom amounts
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
 
-                        <!-- Split Configuration -->
-                        <div x-show="form.split_method !== 'equal'" class="mt-4">
-                            <h4 class="text-sm font-medium text-gray-700 mb-3">Configure Split</h4>
-                            <div class="space-y-3">
-                                <template x-for="member in householdMembers" :key="member.id">
-                                    <div class="flex items-center justify-between p-3 border border-gray-200 rounded-md">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-3">
+                                        How should this expense be split?
+                                    </label>
+                                    <div class="space-y-3">
                                         <div class="flex items-center">
-                                            <div class="flex-shrink-0 h-8 w-8">
-                                                <div class="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
-                                                    <span class="text-sm font-medium text-gray-700" x-text="member.initials"></span>
+                                            <input 
+                                                id="split_equal" 
+                                                name="split_method" 
+                                                type="radio" 
+                                                value="equal"
+                                                x-model="form.split_method"
+                                                @change="updateSplitMethod()"
+                                                class="focus:ring-green-500 h-4 w-4 text-green-600 border-gray-300"
+                                            >
+                                            <label for="split_equal" class="ml-3 block text-sm font-medium text-gray-700">
+                                                Split equally among all members
+                                            </label>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input 
+                                                id="split_percentage" 
+                                                name="split_method" 
+                                                type="radio" 
+                                                value="percentage"
+                                                x-model="form.split_method"
+                                                @change="updateSplitMethod()"
+                                                class="focus:ring-green-500 h-4 w-4 text-green-600 border-gray-300"
+                                            >
+                                            <label for="split_percentage" class="ml-3 block text-sm font-medium text-gray-700">
+                                                Split by percentage
+                                            </label>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input 
+                                                id="split_custom" 
+                                                name="split_method" 
+                                                type="radio" 
+                                                value="custom"
+                                                x-model="form.split_method"
+                                                @change="updateSplitMethod()"
+                                                class="focus:ring-green-500 h-4 w-4 text-green-600 border-gray-300"
+                                            >
+                                            <label for="split_custom" class="ml-3 block text-sm font-medium text-gray-700">
+                                                Custom amounts
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Split Configuration -->
+                                <div x-show="form.split_method !== 'equal'" class="mt-4">
+                                    <h4 class="text-sm font-medium text-gray-700 mb-3">Configure Split</h4>
+                                    <div class="space-y-3">
+                                        <template x-for="member in householdMembers" :key="member.id">
+                                            <div class="flex items-center justify-between p-3 border border-gray-200 rounded-md">
+                                                <div class="flex items-center">
+                                                    <div class="flex-shrink-0 h-8 w-8">
+                                                        <div class="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
+                                                            <span class="text-sm font-medium text-gray-700" x-text="member.initials"></span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="ml-3">
+                                                        <p class="text-sm font-medium text-gray-900" x-text="member.name"></p>
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-center space-x-2">
+                                                    <input 
+                                                        type="number" 
+                                                        :step="form.split_method === 'percentage' ? '0.01' : '0.01'"
+                                                        :min="0"
+                                                        :max="form.split_method === 'percentage' ? '100' : form.amount"
+                                                        x-model="form.split_data[member.id]"
+                                                        @input="validateSplit()"
+                                                        class="w-20 px-2 py-1 text-sm border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                                                        :placeholder="form.split_method === 'percentage' ? '0.00' : '0.00'"
+                                                    >
+                                                    <span class="text-sm text-gray-500" x-text="form.split_method === 'percentage' ? '%' : getCurrencySymbol()"></span>
                                                 </div>
                                             </div>
-                                            <div class="ml-3">
-                                                <p class="text-sm font-medium text-gray-900" x-text="member.name"></p>
+                                        </template>
+                                    </div>
+                                    
+                                    <!-- Split Summary -->
+                                    <div class="mt-3 p-3 bg-gray-50 rounded-md">
+                                        <div class="flex justify-between text-sm">
+                                            <span class="text-gray-600">Total allocated:</span>
+                                            <span class="font-medium" x-text="getSplitTotal()"></span>
+                                        </div>
+                                        <div x-show="form.split_method === 'custom'" class="flex justify-between text-sm mt-1">
+                                            <span class="text-gray-600">Remaining:</span>
+                                            <span class="font-medium" :class="getSplitRemaining() < 0 ? 'text-red-600' : 'text-gray-900'" x-text="getCurrencySymbol() + Math.abs(getSplitRemaining()).toFixed(2)"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tags -->
+                                <div>
+                                    <label for="tags" class="block text-sm font-medium text-gray-700">
+                                        Tags (Optional)
+                                    </label>
+                                    <div class="mt-1">
+                                        <input 
+                                            type="text" 
+                                            name="tags" 
+                                            id="tags" 
+                                            x-model="tagsInput"
+                                            @keydown.enter.prevent="addTag()"
+                                            @keydown.comma.prevent="addTag()"
+                                            class="shadow-sm focus:ring-green-500 focus:border-green-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                            placeholder="Add tags separated by commas or press Enter"
+                                        >
+                                    </div>
+                                    <div x-show="form.tags.length > 0" class="mt-2 flex flex-wrap gap-2">
+                                        <template x-for="(tag, index) in form.tags" :key="index">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                <span x-text="tag"></span>
+                                                <button type="button" @click="removeTag(index)" class="ml-1 text-green-600 hover:text-green-500">
+                                                    <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                                    </svg>
+                                                </button>
+                                            </span>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Review -->
+                        <div x-show="currentStep === 3" x-transition>
+                            <div class="space-y-4">
+                                <h4 class="text-lg font-medium text-gray-900">Review Expense</h4>
+                                
+                                <div class="bg-gray-50 rounded-lg p-4 space-y-3">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <span class="text-sm font-medium text-gray-500">Title:</span>
+                                            <p class="text-sm text-gray-900" x-text="form.title"></p>
+                                        </div>
+                                        <div>
+                                            <span class="text-sm font-medium text-gray-500">Amount:</span>
+                                            <p class="text-sm text-gray-900" x-text="getCurrencySymbol() + parseFloat(form.amount || 0).toFixed(2) + ' ' + form.currency"></p>
+                                        </div>
+                                        <div>
+                                            <span class="text-sm font-medium text-gray-500">Date:</span>
+                                            <p class="text-sm text-gray-900" x-text="formatDate(form.expense_date)"></p>
+                                        </div>
+                                        <div>
+                                            <span class="text-sm font-medium text-gray-500">Category:</span>
+                                            <p class="text-sm text-gray-900" x-text="getCategoryName()"></p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div x-show="form.description">
+                                        <span class="text-sm font-medium text-gray-500">Description:</span>
+                                        <p class="text-sm text-gray-900" x-text="form.description"></p>
+                                    </div>
+                                    
+                                    <div x-show="form.tags.length > 0">
+                                        <span class="text-sm font-medium text-gray-500">Tags:</span>
+                                        <div class="flex flex-wrap gap-1 mt-1">
+                                            <template x-for="tag in form.tags" :key="tag">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800" x-text="tag"></span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <span class="text-sm font-medium text-gray-500">Split Method:</span>
+                                        <p class="text-sm text-gray-900" x-text="getSplitMethodText()"></p>
+                                    </div>
+                                </div>
+
+                                <!-- Split Preview -->
+                                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                                    <h5 class="text-sm font-medium text-gray-700 mb-3">Split Breakdown</h5>
+                                    <div class="space-y-2">
+                                        <template x-for="member in householdMembers" :key="member.id">
+                                            <div class="flex justify-between items-center">
+                                                <span class="text-sm text-gray-900" x-text="member.name"></span>
+                                                <span class="text-sm font-medium text-gray-900" x-text="getCurrencySymbol() + getMemberShare(member.id).toFixed(2)"></span>
                                             </div>
-                                        </div>
-                                        <div class="flex items-center space-x-2">
-                                            <input 
-                                                type="number" 
-                                                :step="form.split_method === 'percentage' ? '0.01' : '0.01'"
-                                                :min="0"
-                                                :max="form.split_method === 'percentage' ? '100' : form.amount"
-                                                x-model="form.split_data[member.id]"
-                                                @input="validateSplit()"
-                                                class="w-20 px-2 py-1 text-sm border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                                                :placeholder="form.split_method === 'percentage' ? '0.00' : '0.00'"
-                                            >
-                                            <span class="text-sm text-gray-500" x-text="form.split_method === 'percentage' ? '%' : getCurrencySymbol()"></span>
-                                        </div>
+                                        </template>
                                     </div>
-                                </template>
-                            </div>
-                            
-                            <!-- Split Summary -->
-                            <div class="mt-3 p-3 bg-gray-50 rounded-md">
-                                <div class="flex justify-between text-sm">
-                                    <span class="text-gray-600">Total allocated:</span>
-                                    <span class="font-medium" x-text="getSplitTotal()"></span>
-                                </div>
-                                <div x-show="form.split_method === 'custom'" class="flex justify-between text-sm mt-1">
-                                    <span class="text-gray-600">Remaining:</span>
-                                    <span class="font-medium" :class="getSplitRemaining() < 0 ? 'text-red-600' : 'text-gray-900'" x-text="getCurrencySymbol() + Math.abs(getSplitRemaining()).toFixed(2)"></span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Tags -->
-                        <div>
-                            <label for="tags" class="block text-sm font-medium text-gray-700">
-                                Tags (Optional)
-                            </label>
-                            <div class="mt-1">
-                                <input 
-                                    type="text" 
-                                    name="tags" 
-                                    id="tags" 
-                                    x-model="tagsInput"
-                                    @keydown.enter.prevent="addTag()"
-                                    @keydown.comma.prevent="addTag()"
-                                    class="shadow-sm focus:ring-green-500 focus:border-green-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                    placeholder="Add tags separated by commas or press Enter"
-                                >
-                            </div>
-                            <div x-show="form.tags.length > 0" class="mt-2 flex flex-wrap gap-2">
-                                <template x-for="(tag, index) in form.tags" :key="index">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        <span x-text="tag"></span>
-                                        <button type="button" @click="removeTag(index)" class="ml-1 text-green-600 hover:text-green-500">
-                                            <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
-                                            </svg>
-                                        </button>
-                                    </span>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 3: Review -->
-                <div x-show="currentStep === 3" x-transition>
-                    <div class="space-y-4">
-                        <h4 class="text-lg font-medium text-gray-900">Review Expense</h4>
-                        
-                        <div class="bg-gray-50 rounded-lg p-4 space-y-3">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <span class="text-sm font-medium text-gray-500">Title:</span>
-                                    <p class="text-sm text-gray-900" x-text="form.title"></p>
+                        <!-- Error Messages -->
+                        <div x-show="Object.keys(errors).length > 0" class="rounded-md bg-red-50 p-4">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                    </svg>
                                 </div>
-                                <div>
-                                    <span class="text-sm font-medium text-gray-500">Amount:</span>
-                                    <p class="text-sm text-gray-900" x-text="getCurrencySymbol() + parseFloat(form.amount || 0).toFixed(2) + ' ' + form.currency"></p>
-                                </div>
-                                <div>
-                                    <span class="text-sm font-medium text-gray-500">Date:</span>
-                                    <p class="text-sm text-gray-900" x-text="formatDate(form.expense_date)"></p>
-                                </div>
-                                <div>
-                                    <span class="text-sm font-medium text-gray-500">Category:</span>
-                                    <p class="text-sm text-gray-900" x-text="getCategoryName()"></p>
-                                </div>
-                            </div>
-                            
-                            <div x-show="form.description">
-                                <span class="text-sm font-medium text-gray-500">Description:</span>
-                                <p class="text-sm text-gray-900" x-text="form.description"></p>
-                            </div>
-                            
-                            <div x-show="form.tags.length > 0">
-                                <span class="text-sm font-medium text-gray-500">Tags:</span>
-                                <div class="flex flex-wrap gap-1 mt-1">
-                                    <template x-for="tag in form.tags" :key="tag">
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800" x-text="tag"></span>
-                                    </template>
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <span class="text-sm font-medium text-gray-500">Split Method:</span>
-                                <p class="text-sm text-gray-900" x-text="getSplitMethodText()"></p>
-                            </div>
-                        </div>
-
-                        <!-- Split Preview -->
-                        <div class="bg-white border border-gray-200 rounded-lg p-4">
-                            <h5 class="text-sm font-medium text-gray-700 mb-3">Split Breakdown</h5>
-                            <div class="space-y-2">
-                                <template x-for="member in householdMembers" :key="member.id">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-sm text-gray-900" x-text="member.name"></span>
-                                        <span class="text-sm font-medium text-gray-900" x-text="getCurrencySymbol() + getMemberShare(member.id).toFixed(2)"></span>
+                                <div class="ml-3">
+                                    <h3 class="text-sm font-medium text-red-800">
+                                        Please fix the following errors:
+                                    </h3>
+                                    <div class="mt-2 text-sm text-red-700">
+                                        <ul class="list-disc pl-5 space-y-1">
+                                            <template x-for="(error, field) in errors" :key="field">
+                                                <li x-text="error"></li>
+                                            </template>
+                                        </ul>
                                     </div>
-                                </template>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </form>
                 </div>
+            </div>
 
-                <!-- Error Messages -->
-                <div x-show="Object.keys(errors).length > 0" class="rounded-md bg-red-50 p-4">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                            </svg>
-                        </div>
-                        <div class="ml-3">
-                            <h3 class="text-sm font-medium text-red-800">
-                                Please fix the following errors:
-                            </h3>
-                            <div class="mt-2 text-sm text-red-700">
-                                <ul class="list-disc pl-5 space-y-1">
-                                    <template x-for="(error, field) in errors" :key="field">
-                                        <li x-text="error"></li>
-                                    </template>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </form>
+            <!-- Modal Footer -->
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button 
+                    type="button"
+                    @click="nextStep()"
+                    x-show="currentStep < 3"
+                    :disabled="!canProceed()"
+                    class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Next
+                </button>
+                <button 
+                    type="submit"
+                    @click="submitForm()"
+                    x-show="currentStep === 3"
+                    :disabled="isSubmitting || !isValidForSubmission()"
+                    class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <span x-show="!isSubmitting">Create Expense</span>
+                    <span x-show="isSubmitting" class="flex items-center">
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Creating...
+                    </span>
+                </button>
+                <button 
+                    type="button"
+                    @click="previousStep()"
+                    x-show="currentStep > 1"
+                    class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                    Previous
+                </button>
+                <button 
+                    type="button"
+                    @click="$dispatch('close-modal')"
+                    class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:mt-0 sm:w-auto sm:text-sm"
+                >
+                    Cancel
+                </button>
+            </div>
         </div>
     </div>
-
-    <!-- Modal Footer -->
-    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-        <button 
-            type="button"
-            @click="nextStep()"
-            x-show="currentStep < 3"
-            :disabled="!canProceed()"
-            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-            Next
-        </button>
-        <button 
-            type="submit"
-            @click="submitForm()"
-            x-show="currentStep === 3"
-            :disabled="isSubmitting || !isValidForSubmission()"
-            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-            <span x-show="!isSubmitting">Create Expense</span>
-            <span x-show="isSubmitting" class="flex items-center">
-                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Creating...
-            </span>
-        </button>
-        <button 
-            type="button"
-            @click="previousStep()"
-            x-show="currentStep > 1"
-            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-        >
-            Previous
-        </button>
-        <button 
-            type="button"
-            @click="$dispatch('close-modal')"
-            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:mt-0 sm:w-auto sm:text-sm"
-        >
-            Cancel
-        </button>
-    </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
 function expenseCreateForm() {
     return {
@@ -474,6 +508,7 @@ function expenseCreateForm() {
         tagsInput: '',
         categories: [],
         householdMembers: [],
+        userHouseholds: [],
         form: {
             title: '',
             description: '',
@@ -484,18 +519,67 @@ function expenseCreateForm() {
             split_method: 'equal',
             split_data: {},
             tags: [],
-            receipt_file: null
+            receipt_file: null,
+            household_id: null
         },
         errors: {},
         
         init() {
-            this.loadCategories();
-            this.loadHouseholdMembers();
+            this.loadUserHouseholds();
+        },
+        
+        async loadUserHouseholds() {
+            try {
+                const response = await fetch('/api/households', {
+                    headers: {
+                        'Authorization': 'Bearer ' + AuthUtils.getAccessToken()
+                    }
+                });
+                const data = await response.json();
+                this.userHouseholds = data || [];
+                
+                // Auto-select household logic
+                if (this.userHouseholds.length === 0) {
+                    this.errors.general = 'You need to create or join a household first';
+                    setTimeout(() => {
+                        window.location.href = '/onboarding';
+                    }, 2000);
+                    return;
+                } else if (this.userHouseholds.length === 1) {
+                    // Auto-select the only household
+                    this.form.household_id = this.userHouseholds[0].id;
+                    this.loadCategories();
+                    this.loadHouseholdMembers();
+                } else {
+                    // Multiple households - user needs to select
+                    // Categories and members will be loaded after household selection
+                }
+            } catch (error) {
+                console.error('Error loading user households:', error);
+                this.errors.general = 'Failed to load your households';
+            }
+        },
+        
+        onHouseholdChange() {
+            if (this.form.household_id) {
+                this.loadCategories();
+                this.loadHouseholdMembers();
+            } else {
+                this.categories = [];
+                this.householdMembers = [];
+            }
         },
         
         async loadCategories() {
             try {
-                const response = await fetch('/api/categories', {
+                // Get household ID from URL or context
+                const householdId = this.form.household_id;
+                if (!householdId) {
+                    console.error('No household ID available for loading categories');
+                    return;
+                }
+                
+                const response = await fetch(`/api/households/${householdId}/categories`, {
                     headers: {
                         'Authorization': 'Bearer ' + AuthUtils.getAccessToken()
                     }
@@ -510,7 +594,7 @@ function expenseCreateForm() {
         async loadHouseholdMembers() {
             try {
                 // Get household ID from URL or context
-                const householdId = this.getHouseholdId();
+                const householdId = this.form.household_id;
                 if (!householdId) return;
                 
                 const response = await fetch(`/api/households/${householdId}/members`, {
@@ -521,8 +605,8 @@ function expenseCreateForm() {
                 const data = await response.json();
                 this.householdMembers = (data.members || []).map(member => ({
                     id: member.user_id,
-                    name: member.nickname || `${member.user.first_name} ${member.user.last_name}`,
-                    initials: this.getInitials(member.user.first_name, member.user.last_name)
+                    name: member.nickname || member.username,
+                    initials: this.getInitials(member.username, member.email)
                 }));
                 
                 // Initialize split data
@@ -532,15 +616,21 @@ function expenseCreateForm() {
             }
         },
         
-        getHouseholdId() {
-            // Extract household ID from URL or get from context
-            const path = window.location.pathname;
-            const match = path.match(/\/households\/([^\/]+)/);
-            return match ? match[1] : null;
-        },
-        
-        getInitials(firstName, lastName) {
-            return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
+        getInitials(username, email) {
+            // Try to get initials from username first, fallback to email
+            if (username && username.length >= 2) {
+                // If username has spaces, use first letter of each word
+                const words = username.split(' ');
+                if (words.length >= 2) {
+                    return `${words[0].charAt(0)}${words[1].charAt(0)}`.toUpperCase();
+                }
+                // Otherwise use first two characters
+                return username.substring(0, 2).toUpperCase();
+            } else if (email) {
+                // Fallback to first two characters of email
+                return email.substring(0, 2).toUpperCase();
+            }
+            return 'U?'; // Ultimate fallback
         },
         
         validateField(field) {
@@ -698,7 +788,14 @@ function expenseCreateForm() {
         
         canProceed() {
             if (this.currentStep === 1) {
-                return this.form.title.trim() && this.form.amount && parseFloat(this.form.amount) > 0 && !this.errors.title && !this.errors.amount;
+                let basicFieldsValid = this.form.title.trim() && this.form.amount && parseFloat(this.form.amount) > 0 && !this.errors.title && !this.errors.amount;
+                
+                // If multiple households, also check household selection
+                if (this.userHouseholds.length > 1) {
+                    basicFieldsValid = basicFieldsValid && this.form.household_id;
+                }
+                
+                return basicFieldsValid;
             } else if (this.currentStep === 2) {
                 return !this.errors.split;
             }
@@ -730,48 +827,42 @@ function expenseCreateForm() {
             this.errors = {};
             
             try {
-                const householdId = this.getHouseholdId();
+                const householdId = this.form.household_id;
                 if (!householdId) {
                     throw new Error('Household ID not found');
                 }
                 
-                // Prepare form data
-                const formData = new FormData();
-                
-                // Basic expense data
+                // Prepare expense data as JSON
                 const expenseData = {
                     title: this.form.title,
                     description: this.form.description,
                     amount: parseFloat(this.form.amount),
                     currency: this.form.currency,
                     expense_date: this.form.expense_date,
-                    category_id: this.form.category_id || null,
                     split_method: this.form.split_method,
                     split_data: this.form.split_data,
                     tags: this.form.tags
                 };
                 
-                formData.append('expense_data', JSON.stringify(expenseData));
-                
-                // Add receipt file if present
-                if (this.form.receipt_file) {
-                    formData.append('receipt', this.form.receipt_file);
+                // Only include category_id if one is selected
+                if (this.form.category_id) {
+                    expenseData.category_id = this.form.category_id;
                 }
                 
                 const response = await fetch(`/api/households/${householdId}/expenses`, {
                     method: 'POST',
                     headers: {
+                        'Content-Type': 'application/json',
                         'Authorization': 'Bearer ' + AuthUtils.getAccessToken()
                     },
-                    body: formData
+                    body: JSON.stringify(expenseData)
                 });
                 
                 const data = await response.json();
                 
                 if (response.ok) {
-                    // Success - trigger event and close modal
-                    document.dispatchEvent(new CustomEvent('expenseCreated', { detail: data }));
-                    this.$dispatch('close-modal');
+                    // Success - redirect to expenses list or show success
+                    window.location.href = '/expenses';
                 } else {
                     // Handle validation errors
                     if (data.detail && typeof data.detail === 'object') {
@@ -790,3 +881,4 @@ function expenseCreateForm() {
     }
 }
 </script> 
+{% endblock %} 

@@ -219,7 +219,7 @@
     <!-- Expenses List -->
     <div 
         id="expenses-container"
-        hx-get="{% if household %}/api/households/{{ household.id }}/expenses{% else %}/api/expenses{% endif %}"
+        hx-get="{% if household %}/api/households/{{ household.id }}/expenses{% else %}/api/expenses/recent{% endif %}"
         hx-trigger="load, applyFilters from:body"
         hx-target="#expenses-container"
         hx-swap="innerHTML"

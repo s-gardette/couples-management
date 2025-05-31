@@ -205,6 +205,80 @@ async def get_household_expenses(
         )
 
 
+@router.get("/expenses/recent", response_model=ExpenseListResponse)
+async def get_recent_expenses(
+    limit: int = Query(10, ge=1, le=50, description="Number of recent expenses"),
+    household_id: Optional[UUID] = Query(None, description="Filter by household"),
+    current_user: User = Depends(get_current_user),
+    expense_service: ExpenseService = Depends(get_expense_service),
+    household_service: HouseholdService = Depends(get_household_service)
+):
+    """Get recent expenses across all user's households or a specific household."""
+    try:
+        if household_id:
+            # Check if user has access to this specific household
+            has_permission = await household_service.check_user_permission(
+                user_id=current_user.id,
+                household_id=household_id
+            )
+            
+            if not has_permission:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You don't have access to this household"
+                )
+            
+            # Get recent expenses for specific household
+            success, message, expenses = await expense_service.get_household_expenses(
+                household_id=household_id,
+                user_id=current_user.id,
+                skip=0,
+                limit=limit,
+                sort_by="created_at",
+                sort_order="desc"
+            )
+        else:
+            # Get recent expenses across all user's households
+            success, message, expenses = await expense_service.get_user_recent_expenses(
+                user_id=current_user.id,
+                limit=limit
+            )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=message
+            )
+        
+        # Calculate totals
+        total_amount = sum(expense.amount for expense in expenses)
+        paid_amount = sum(
+            expense.amount for expense in expenses 
+            if hasattr(expense, 'shares') and expense.shares and 
+            all(share.is_paid for share in expense.shares)
+        )
+        unpaid_amount = total_amount - paid_amount
+        
+        return ExpenseListResponse(
+            expenses=expenses,
+            total=len(expenses),
+            page=1,
+            per_page=limit,
+            total_amount=total_amount,
+            paid_amount=paid_amount,
+            unpaid_amount=unpaid_amount
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting recent expenses: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve recent expenses"
+        )
+
+
 @router.get("/expenses/{expense_id}", response_model=ExpenseResponse)
 async def get_expense_details(
     expense_id: UUID,
@@ -532,9 +606,21 @@ async def get_expense_summary(
         start_date = None
         end_date = None
         if date_from:
-            start_date = datetime.strptime(date_from, "%Y-%m-%d").date()
+            try:
+                start_date = datetime.strptime(date_from, "%Y-%m-%d").date()
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid date_from format. Use YYYY-MM-DD"
+                )
         if date_to:
-            end_date = datetime.strptime(date_to, "%Y-%m-%d").date()
+            try:
+                end_date = datetime.strptime(date_to, "%Y-%m-%d").date()
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid date_to format. Use YYYY-MM-DD"
+                )
         
         success, message, summary = await expense_service.get_expense_summary(
             household_id=household_id,

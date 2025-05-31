@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}Create Your First Household{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="text-center">
+            <div class="mx-auto h-16 w-16 bg-indigo-100 rounded-full flex items-center justify-center">
+                <svg class="h-8 w-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 4l2 2 4-4"></path>
+                </svg>
+            </div>
+            <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
+                Create Your First Household
+            </h2>
+            <p class="mt-2 text-sm text-gray-600">
+                Step 1 of 3: Set up your household
+            </p>
+        </div>
+    </div>
+
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+            <!-- Progress Bar -->
+            <div class="mb-8">
+                <div class="flex items-center">
+                    <div class="flex items-center text-sm font-medium text-indigo-600">
+                        <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center">
+                            <span class="text-white text-sm">1</span>
+                        </div>
+                        <span class="ml-2">Create</span>
+                    </div>
+                    <div class="flex-1 mx-4 h-1 bg-gray-200 rounded">
+                        <div class="h-1 bg-indigo-600 rounded" style="width: 33%"></div>
+                    </div>
+                    <div class="flex items-center text-sm font-medium text-gray-400">
+                        <div class="flex-shrink-0 w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                            <span class="text-gray-500 text-sm">2</span>
+                        </div>
+                        <span class="ml-2">Members</span>
+                    </div>
+                    <div class="flex-1 mx-4 h-1 bg-gray-200 rounded"></div>
+                    <div class="flex items-center text-sm font-medium text-gray-400">
+                        <div class="flex-shrink-0 w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                            <span class="text-gray-500 text-sm">3</span>
+                        </div>
+                        <span class="ml-2">Done</span>
+                    </div>
+                </div>
+            </div>
+
+            <form x-data="householdCreateForm()" @submit.prevent="submitForm()">
+                <div class="space-y-6">
+                    <!-- Error Display -->
+                    <div x-show="Object.keys(errors).length > 0" class="rounded-md bg-red-50 p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-red-800">Please fix the following errors:</h3>
+                                <div class="mt-2 text-sm text-red-700">
+                                    <ul class="list-disc pl-5 space-y-1">
+                                        <template x-for="(error, field) in errors" :key="field">
+                                            <li x-text="error"></li>
+                                        </template>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Household Name -->
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700">
+                            Household Name *
+                        </label>
+                        <div class="mt-1">
+                            <input 
+                                id="name" 
+                                name="name" 
+                                type="text" 
+                                required 
+                                x-model="form.name"
+                                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                placeholder="e.g., The Smith Family, Apartment 4B, etc."
+                            >
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">
+                            Choose a name that helps identify your household
+                        </p>
+                    </div>
+
+                    <!-- Description -->
+                    <div>
+                        <label for="description" class="block text-sm font-medium text-gray-700">
+                            Description (Optional)
+                        </label>
+                        <div class="mt-1">
+                            <textarea 
+                                id="description" 
+                                name="description" 
+                                rows="3"
+                                x-model="form.description"
+                                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                placeholder="Brief description of your household..."
+                            ></textarea>
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">
+                            Optional: Add a description to help others understand this household
+                        </p>
+                    </div>
+
+                    <!-- Currency Setting -->
+                    <div>
+                        <label for="currency" class="block text-sm font-medium text-gray-700">
+                            Default Currency
+                        </label>
+                        <div class="mt-1">
+                            <select 
+                                id="currency" 
+                                name="currency"
+                                x-model="form.settings.default_currency"
+                                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            >
+                                <option value="USD">USD - US Dollar</option>
+                                <option value="EUR">EUR - Euro</option>
+                                <option value="GBP">GBP - British Pound</option>
+                                <option value="CAD">CAD - Canadian Dollar</option>
+                                <option value="AUD">AUD - Australian Dollar</option>
+                                <option value="JPY">JPY - Japanese Yen</option>
+                            </select>
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">
+                            This will be the default currency for expenses in this household
+                        </p>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex space-x-3">
+                        <a href="/onboarding" 
+                           class="flex-1 flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                            Back
+                        </a>
+                        <button 
+                            type="submit" 
+                            :disabled="isSubmitting || !form.name.trim()"
+                            class="flex-1 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            <span x-show="!isSubmitting">Create Household</span>
+                            <span x-show="isSubmitting" class="flex items-center">
+                                <svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Creating...
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function householdCreateForm() {
+    return {
+        form: {
+            name: '',
+            description: '',
+            settings: {
+                default_currency: 'USD'
+            }
+        },
+        errors: {},
+        isSubmitting: false,
+
+        async submitForm() {
+            this.isSubmitting = true;
+            this.errors = {};
+
+            try {
+                const response = await fetch('/api/households', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${window.AuthUtils.getAccessToken()}`
+                    },
+                    body: JSON.stringify(this.form)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Redirect to add members step
+                    window.location.href = `/onboarding/add-members?household_id=${data.id}`;
+                } else {
+                    if (data.detail) {
+                        if (typeof data.detail === 'object') {
+                            this.errors = data.detail;
+                        } else {
+                            this.errors = { general: data.detail };
+                        }
+                    } else {
+                        this.errors = { general: 'Failed to create household' };
+                    }
+                }
+            } catch (error) {
+                console.error('Error creating household:', error);
+                this.errors = { general: 'Network error. Please try again.' };
+            } finally {
+                this.isSubmitting = false;
+            }
+        }
+    }
+}
+</script>
+{% endblock %} 

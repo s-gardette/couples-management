@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome to Your Household!{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="text-center">
+            <div class="mx-auto h-16 w-16 bg-green-100 rounded-full flex items-center justify-center">
+                <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
+                🎉 You're All Set!
+            </h2>
+            <p class="mt-2 text-sm text-gray-600">
+                Step 3 of 3: Ready to track expenses
+            </p>
+        </div>
+    </div>
+
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+            <!-- Progress Bar -->
+            <div class="mb-8">
+                <div class="flex items-center">
+                    <div class="flex items-center text-sm font-medium text-green-600">
+                        <div class="flex-shrink-0 w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+                            <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <span class="ml-2">Create</span>
+                    </div>
+                    <div class="flex-1 mx-4 h-1 bg-green-600 rounded"></div>
+                    <div class="flex items-center text-sm font-medium text-green-600">
+                        <div class="flex-shrink-0 w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+                            <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <span class="ml-2">Members</span>
+                    </div>
+                    <div class="flex-1 mx-4 h-1 bg-green-600 rounded"></div>
+                    <div class="flex items-center text-sm font-medium text-green-600">
+                        <div class="flex-shrink-0 w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+                            <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <span class="ml-2">Done</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <!-- Success Message -->
+                <div class="text-center">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">
+                        Welcome to Your Household Management System!
+                    </h3>
+                    <p class="text-sm text-gray-600 mb-6">
+                        Your household is ready and you can now start tracking expenses, 
+                        managing budgets, and keeping everyone on the same page financially.
+                    </p>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h4 class="text-sm font-medium text-gray-900 mb-4">What would you like to do first?</h4>
+                    <div class="space-y-3">
+                        <a href="/expenses/create" 
+                           class="w-full flex items-center justify-between p-3 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition-colors">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+                                    <svg class="h-4 w-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900">Add Your First Expense</p>
+                                    <p class="text-xs text-gray-500">Start tracking household expenses</p>
+                                </div>
+                            </div>
+                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+
+                        <a href="/households" 
+                           class="w-full flex items-center justify-between p-3 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition-colors">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                    <svg class="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900">Manage Household</p>
+                                    <p class="text-xs text-gray-500">Add members, update settings</p>
+                                </div>
+                            </div>
+                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+
+                        <a href="/expenses/dashboard" 
+                           class="w-full flex items-center justify-between p-3 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition-colors">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                    <svg class="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900">View Dashboard</p>
+                                    <p class="text-xs text-gray-500">See overview and analytics</p>
+                                </div>
+                            </div>
+                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Tips -->
+                <div class="bg-blue-50 rounded-lg p-4">
+                    <h4 class="text-sm font-medium text-blue-900 mb-2">💡 Pro Tips</h4>
+                    <ul class="text-xs text-blue-800 space-y-1">
+                        <li>• Upload receipts to keep track of your expenses</li>
+                        <li>• Use categories to organize different types of spending</li>
+                        <li>• Split expenses fairly among household members</li>
+                        <li>• Check the analytics to understand spending patterns</li>
+                    </ul>
+                </div>
+
+                <!-- Main Action Button -->
+                <div class="pt-4">
+                    <a href="/expenses/dashboard" 
+                       class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                        Go to Dashboard
+                    </a>
+                </div>
+
+                <!-- Help Text -->
+                <div class="text-center">
+                    <p class="text-xs text-gray-500">
+                        Need help? Check out our <a href="#" class="text-indigo-600 hover:text-indigo-500">user guide</a> 
+                        or <a href="#" class="text-indigo-600 hover:text-indigo-500">contact support</a>.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

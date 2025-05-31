@@ -24,7 +24,7 @@
                             <svg class="mr-1.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0h6m-6 0l-1 12a2 2 0 002 2h6a2 2 0 002-2L15 7"></path>
                             </svg>
-                            Created {{ household.created_at|date:"M d, Y" }}
+                            Created {{ household.created_at.strftime('%b %d, %Y') if household.created_at else 'Recent' }}
                         </div>
                         {% if household.user_role == 'admin' %}
                         <div class="flex items-center text-sm text-indigo-600">
@@ -170,28 +170,13 @@
                     
                     <div 
                         id="recent-expenses"
-                        hx-get="/api/households/{{ household.id }}/expenses?limit=5"
-                        hx-trigger="load, refreshExpenses from:body"
+                        hx-get="/partials/expenses/recent?household_id={{ household.id }}&limit=5"
+                        hx-trigger="refreshExpenses from:body"
                         hx-target="#recent-expenses"
                         hx-swap="innerHTML"
                     >
-                        <!-- Recent expenses will be loaded here -->
-                        <div class="space-y-4">
-                            <div class="animate-pulse flex space-x-4">
-                                <div class="rounded-full bg-gray-200 h-10 w-10"></div>
-                                <div class="flex-1 space-y-2 py-1">
-                                    <div class="h-4 bg-gray-200 rounded w-3/4"></div>
-                                    <div class="h-3 bg-gray-200 rounded w-1/2"></div>
-                                </div>
-                            </div>
-                            <div class="animate-pulse flex space-x-4">
-                                <div class="rounded-full bg-gray-200 h-10 w-10"></div>
-                                <div class="flex-1 space-y-2 py-1">
-                                    <div class="h-4 bg-gray-200 rounded w-3/4"></div>
-                                    <div class="h-3 bg-gray-200 rounded w-1/2"></div>
-                                </div>
-                            </div>
-                        </div>
+                        <!-- Preloaded recent expenses for performance -->
+                        {% include 'partials/expenses/recent.html' %}
                     </div>
                 </div>
             </div>

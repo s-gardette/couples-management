@@ -276,6 +276,56 @@ class ExpenseService(BaseService[Expense, dict, dict]):
             logger.error(f"Error getting expense details: {e}")
             return False, f"Failed to get expense: {str(e)}", None
 
+    async def get_user_recent_expenses(
+        self,
+        user_id: UUID,
+        limit: int = 10
+    ) -> Tuple[bool, str, List[Expense]]:
+        """
+        Get recent expenses across all user's households.
+
+        Args:
+            user_id: User ID
+            limit: Maximum number of expenses to return
+
+        Returns:
+            Tuple of (success, message, expenses_list)
+        """
+        try:
+            # Get all households the user is a member of
+            user_households = (
+                self.db.query(UserHousehold.household_id)
+                .filter(
+                    UserHousehold.user_id == user_id,
+                    UserHousehold.is_active == True
+                )
+                .subquery()
+            )
+
+            # Get recent expenses from all user's households
+            expenses = (
+                self.db.query(Expense)
+                .options(
+                    joinedload(Expense.category),
+                    joinedload(Expense.creator),
+                    joinedload(Expense.shares).joinedload(ExpenseShare.user_household).joinedload(UserHousehold.user),
+                    joinedload(Expense.household)
+                )
+                .filter(
+                    Expense.household_id.in_(user_households),
+                    Expense.is_active == True
+                )
+                .order_by(Expense.created_at.desc())
+                .limit(limit)
+                .all()
+            )
+
+            return True, "Recent expenses retrieved successfully", expenses
+
+        except Exception as e:
+            logger.error(f"Error getting user recent expenses: {e}")
+            return False, f"Failed to get recent expenses: {str(e)}", []
+
     async def update_expense(
         self,
         expense_id: UUID,

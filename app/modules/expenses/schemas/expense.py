@@ -22,7 +22,7 @@ class ExpenseBase(BaseModel):
 
 class ExpenseCreate(ExpenseBase):
     """Schema for creating a new expense."""
-    category_id: UUID = Field(..., description="Category ID for the expense")
+    category_id: Optional[UUID] = Field(None, description="Category ID for the expense")
     split_method: str = Field(default="equal", description="Split method: equal, percentage, custom")
     split_data: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Split configuration data")
 

@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}Join a Household{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="text-center">
+            <div class="mx-auto h-16 w-16 bg-indigo-100 rounded-full flex items-center justify-center">
+                <svg class="h-8 w-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                </svg>
+            </div>
+            <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
+                Join a Household
+            </h2>
+            <p class="mt-2 text-sm text-gray-600">
+                Enter the invite code to join an existing household
+            </p>
+        </div>
+    </div>
+
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+            <form x-data="joinHouseholdForm()" @submit.prevent="submitForm()">
+                <div class="space-y-6">
+                    <!-- Error Display -->
+                    <div x-show="Object.keys(errors).length > 0" class="rounded-md bg-red-50 p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-red-800">Please fix the following errors:</h3>
+                                <div class="mt-2 text-sm text-red-700">
+                                    <ul class="list-disc pl-5 space-y-1">
+                                        <template x-for="(error, field) in errors" :key="field">
+                                            <li x-text="error"></li>
+                                        </template>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Success Display -->
+                    <div x-show="success" class="rounded-md bg-green-50 p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-green-800" x-text="successMessage"></h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Instructions -->
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-blue-800">How to join a household</h3>
+                                <div class="mt-2 text-sm text-blue-700">
+                                    <p>Ask a household member for their invite code. It's usually a short code like "ABC123" that they can share with you.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Invite Code -->
+                    <div>
+                        <label for="invite_code" class="block text-sm font-medium text-gray-700">
+                            Invite Code *
+                        </label>
+                        <div class="mt-1">
+                            <input 
+                                id="invite_code" 
+                                name="invite_code" 
+                                type="text" 
+                                required 
+                                x-model="form.invite_code"
+                                @input="form.invite_code = form.invite_code.toUpperCase()"
+                                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm font-mono text-center text-lg tracking-wider"
+                                placeholder="ABC123"
+                                maxlength="20"
+                            >
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">
+                            Enter the invite code exactly as provided by the household member
+                        </p>
+                    </div>
+
+                    <!-- Nickname -->
+                    <div>
+                        <label for="nickname" class="block text-sm font-medium text-gray-700">
+                            Your Nickname in this Household (Optional)
+                        </label>
+                        <div class="mt-1">
+                            <input 
+                                id="nickname" 
+                                name="nickname" 
+                                type="text" 
+                                x-model="form.nickname"
+                                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                placeholder="e.g., Mom, Dad, John, etc."
+                                maxlength="100"
+                            >
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500">
+                            Optional: How you'd like to be known in this household (different from your username)
+                        </p>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex space-x-3">
+                        <a href="/onboarding" 
+                           class="flex-1 flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                            Back
+                        </a>
+                        <button 
+                            type="submit" 
+                            :disabled="isSubmitting || !form.invite_code.trim()"
+                            class="flex-1 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            <span x-show="!isSubmitting">Join Household</span>
+                            <span x-show="isSubmitting" class="flex items-center">
+                                <svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Joining...
+                            </span>
+                        </button>
+                    </div>
+
+                    <!-- Alternative Action -->
+                    <div class="text-center pt-4 border-t border-gray-200">
+                        <p class="text-sm text-gray-600 mb-3">
+                            Don't have an invite code?
+                        </p>
+                        <a href="/onboarding/create-household" 
+                           class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                            Create your own household instead
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function joinHouseholdForm() {
+    return {
+        form: {
+            invite_code: '',
+            nickname: ''
+        },
+        errors: {},
+        success: false,
+        successMessage: '',
+        isSubmitting: false,
+
+        async submitForm() {
+            this.isSubmitting = true;
+            this.errors = {};
+            this.success = false;
+
+            try {
+                const response = await fetch('/api/households/join', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${window.AuthUtils.getAccessToken()}`
+                    },
+                    body: JSON.stringify(this.form)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    this.success = true;
+                    this.successMessage = data.message || 'Successfully joined household!';
+                    
+                    // Redirect to dashboard after a short delay
+                    setTimeout(() => {
+                        window.location.href = '/expenses/dashboard';
+                    }, 2000);
+                } else {
+                    if (data.detail) {
+                        if (typeof data.detail === 'object') {
+                            this.errors = data.detail;
+                        } else {
+                            this.errors = { general: data.detail };
+                        }
+                    } else {
+                        this.errors = { general: 'Failed to join household' };
+                    }
+                }
+            } catch (error) {
+                console.error('Error joining household:', error);
+                this.errors = { general: 'Network error. Please try again.' };
+            } finally {
+                this.isSubmitting = false;
+            }
+        }
+    }
+}
+</script>
+{% endblock %} 
