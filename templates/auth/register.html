@@ -5,12 +5,12 @@
 {% block page_title %}Create your account{% endblock %}
 
 {% block page_subtitle %}
-Or <a href="{{ url_for('login') }}" class="font-medium text-indigo-600 hover:text-indigo-500">sign in to your existing account</a>
+Or <a href="/login" class="font-medium text-indigo-600 hover:text-indigo-500">sign in to your existing account</a>
 {% endblock %}
 
 {% block content %}
 <form id="register-form" 
-      hx-post="{{ url_for('register') }}" 
+      hx-post="/api/auth/register" 
       hx-target="#register-form" 
       hx-swap="outerHTML"
       hx-indicator="#register-loading"
@@ -92,7 +92,7 @@ Or <a href="{{ url_for('login') }}" class="font-medium text-indigo-600 hover:tex
                            required 
                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                            placeholder="Enter your email address"
-                           hx-post="{{ url_for('check_email_availability') }}"
+                           hx-post="/api/auth/check-email"
                            hx-trigger="blur"
                            hx-target="#email-validation"
                            hx-include="[name='email']"
@@ -123,7 +123,7 @@ Or <a href="{{ url_for('login') }}" class="font-medium text-indigo-600 hover:tex
                            required 
                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                            placeholder="Choose a username"
-                           hx-post="{{ url_for('check_username_availability') }}"
+                           hx-post="/api/auth/check-username"
                            hx-trigger="blur"
                            hx-target="#username-validation"
                            hx-include="[name='username']"
@@ -154,7 +154,7 @@ Or <a href="{{ url_for('login') }}" class="font-medium text-indigo-600 hover:tex
                            required 
                            class="appearance-none block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                            placeholder="Create a strong password"
-                           hx-post="{{ url_for('check_password_strength') }}"
+                           hx-post="/api/auth/check-password-strength"
                            hx-trigger="input changed delay:500ms"
                            hx-target="#password-strength"
                            hx-include="[name='password']"
@@ -297,7 +297,7 @@ Or <a href="{{ url_for('login') }}" class="font-medium text-indigo-600 hover:tex
 {% block footer_links %}
 <p class="text-center text-sm text-gray-600">
     Already have an account?
-    <a href="{{ url_for('login') }}" class="font-medium text-indigo-600 hover:text-indigo-500">
+    <a href="/login" class="font-medium text-indigo-600 hover:text-indigo-500">
         Sign in here
     </a>
 </p>
@@ -335,6 +335,7 @@ Or <a href="{{ url_for('login') }}" class="font-medium text-indigo-600 hover:tex
                        this.passwordMatch &&
                        this.emailValid && 
                        this.usernameValid &&
+                       this.passwordStrong &&
                        !this.emailError && 
                        !this.usernameError;
             },
@@ -372,31 +373,206 @@ Or <a href="{{ url_for('login') }}" class="font-medium text-indigo-600 hover:tex
     document.addEventListener('htmx:afterRequest', function(event) {
         const form = Alpine.$data(document.getElementById('register-form'));
         
+        // Handle registration form submission
+        if (event.detail.target.id === 'register-form') {
+            if (event.detail.xhr.status === 201) {
+                // Successful registration
+                const response = JSON.parse(event.detail.xhr.responseText);
+                
+                // Check for stored household invite code
+                const storedCode = localStorage.getItem('household_invite_code');
+                const timestamp = localStorage.getItem('household_invite_timestamp');
+                
+                if (storedCode && timestamp) {
+                    const codeAge = Date.now() - parseInt(timestamp);
+                    const oneHour = 60 * 60 * 1000;
+                    
+                    if (codeAge < oneHour) {
+                        // Show success with household join info
+                        const successHtml = `
+                            <div class="rounded-md bg-green-50 p-4">
+                                <div class="flex">
+                                    <div class="flex-shrink-0">
+                                        <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                        </svg>
+                                    </div>
+                                    <div class="ml-3">
+                                        <h3 class="text-sm font-medium text-green-800">
+                                            Account created successfully!
+                                        </h3>
+                                        <div class="mt-2 text-sm text-green-700">
+                                            <p>${response.message}</p>
+                                            <p class="mt-1">You'll be automatically joined to the household after signing in.</p>
+                                        </div>
+                                        <div class="mt-4">
+                                            <div class="-mx-2 -my-1.5 flex">
+                                                <a href="/login?next=/join?code=${storedCode}" class="rounded-md bg-green-50 px-2 py-1.5 text-sm font-medium text-green-800 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:ring-offset-green-50">
+                                                    Continue to Sign In & Join Household
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        event.detail.target.outerHTML = successHtml;
+                        
+                        // Redirect to login with household join after delay
+                        setTimeout(() => {
+                            window.location.href = `/login?next=/join?code=${storedCode}`;
+                        }, 2000);
+                        return;
+                    }
+                }
+                
+                // Standard success message (no household invite)
+                const successHtml = `
+                    <div class="rounded-md bg-green-50 p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-green-800">
+                                    Account created successfully!
+                                </h3>
+                                <div class="mt-2 text-sm text-green-700">
+                                    <p>${response.message}</p>
+                                    ${response.email_verification_required ? '<p class="mt-1">Please check your email for verification instructions.</p>' : ''}
+                                </div>
+                                <div class="mt-4">
+                                    <div class="-mx-2 -my-1.5 flex">
+                                        <a href="/login" class="rounded-md bg-green-50 px-2 py-1.5 text-sm font-medium text-green-800 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:ring-offset-green-50">
+                                            Continue to Sign In
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                event.detail.target.outerHTML = successHtml;
+                
+                // If there's a next URL, redirect after a delay
+                const urlParams = new URLSearchParams(window.location.search);
+                const nextUrl = urlParams.get('next');
+                if (nextUrl) {
+                    setTimeout(() => {
+                        window.location.href = '/login?next=' + encodeURIComponent(nextUrl);
+                    }, 2000);
+                }
+            } else if (event.detail.xhr.status >= 400) {
+                // Error in registration
+                const response = JSON.parse(event.detail.xhr.responseText);
+                const errorHtml = `
+                    <div class="rounded-md bg-red-50 p-4 mb-6">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-red-800">
+                                    Registration failed
+                                </h3>
+                                <div class="mt-2 text-sm text-red-700">
+                                    <p>${response.detail || 'An error occurred during registration'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                // Insert error message at the top of the form
+                const formElement = document.getElementById('register-form');
+                formElement.insertAdjacentHTML('afterbegin', errorHtml);
+            }
+            return; // Don't process other validation handlers for registration form
+        }
+        
         if (event.detail.target.id === 'email-validation') {
-            const response = event.detail.xhr.responseText;
-            if (response.includes('error') || response.includes('taken')) {
+            if (event.detail.xhr.status === 200) {
+                const response = JSON.parse(event.detail.xhr.responseText);
+                if (response.available) {
+                    form.emailError = false;
+                    form.emailValid = true;
+                    event.detail.target.innerHTML = '<p class="text-sm text-green-600">' + response.message + '</p>';
+                } else {
+                    form.emailError = true;
+                    form.emailValid = false;
+                    event.detail.target.innerHTML = '<p class="text-sm text-red-600">' + response.message + '</p>';
+                }
+            } else {
                 form.emailError = true;
                 form.emailValid = false;
-            } else if (response.includes('available')) {
-                form.emailError = false;
-                form.emailValid = true;
+                event.detail.target.innerHTML = '<p class="text-sm text-red-600">Error checking email availability</p>';
             }
         }
         
         if (event.detail.target.id === 'username-validation') {
-            const response = event.detail.xhr.responseText;
-            if (response.includes('error') || response.includes('taken')) {
+            if (event.detail.xhr.status === 200) {
+                const response = JSON.parse(event.detail.xhr.responseText);
+                if (response.available) {
+                    form.usernameError = false;
+                    form.usernameValid = true;
+                    event.detail.target.innerHTML = '<p class="text-sm text-green-600">' + response.message + '</p>';
+                } else {
+                    form.usernameError = true;
+                    form.usernameValid = false;
+                    event.detail.target.innerHTML = '<p class="text-sm text-red-600">' + response.message + '</p>';
+                }
+            } else {
                 form.usernameError = true;
                 form.usernameValid = false;
-            } else if (response.includes('available')) {
-                form.usernameError = false;
-                form.usernameValid = true;
+                event.detail.target.innerHTML = '<p class="text-sm text-red-600">Error checking username availability</p>';
             }
         }
         
         if (event.detail.target.id === 'password-strength') {
-            const response = event.detail.xhr.responseText;
-            form.passwordStrong = response.includes('strong') || response.includes('good');
+            if (event.detail.xhr.status === 200) {
+                const response = JSON.parse(event.detail.xhr.responseText);
+                form.passwordStrong = response.is_valid;
+                
+                let html = '<div class="text-sm">';
+                
+                // Show strength level
+                const levelColors = {
+                    'very_weak': 'text-red-600',
+                    'weak': 'text-orange-600', 
+                    'fair': 'text-yellow-600',
+                    'good': 'text-blue-600',
+                    'strong': 'text-green-600'
+                };
+                
+                html += '<p class="' + (levelColors[response.level] || 'text-gray-600') + '">Password strength: ' + response.level.replace('_', ' ').toUpperCase() + '</p>';
+                
+                // Show errors
+                if (response.errors && response.errors.length > 0) {
+                    html += '<ul class="mt-1 text-red-600 text-xs list-disc list-inside">';
+                    response.errors.forEach(error => {
+                        html += '<li>' + error + '</li>';
+                    });
+                    html += '</ul>';
+                }
+                
+                // Show suggestions
+                if (response.suggestions && response.suggestions.length > 0) {
+                    html += '<ul class="mt-1 text-blue-600 text-xs list-disc list-inside">';
+                    response.suggestions.forEach(suggestion => {
+                        html += '<li>' + suggestion + '</li>';
+                    });
+                    html += '</ul>';
+                }
+                
+                html += '</div>';
+                event.detail.target.innerHTML = html;
+            } else {
+                form.passwordStrong = false;
+                event.detail.target.innerHTML = '<p class="text-sm text-red-600">Error checking password strength</p>';
+            }
         }
     });
 </script>

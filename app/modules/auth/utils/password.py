@@ -56,7 +56,7 @@ def calculate_password_strength_score(password: str) -> int:
         score += 10
     if re.search(r'\d', password):
         score += 10
-    if re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+    if re.search(r'[!@#$%^&*(),.?":{}|<>\-_=\[\]\\\/~`+]', password):
         score += 10
 
     # Pattern complexity (up to 20 points)
@@ -121,7 +121,7 @@ def get_password_suggestions(password: str, errors: list[str]) -> list[str]:
     if len(password) < 12:
         suggestions.append("Consider using at least 12 characters for better security")
 
-    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>\-_=\[\]\\\/~`+]', password):
         suggestions.append("Add special characters like !@#$%^&* for stronger security")
 
     if re.search(r'(.)\1{2,}', password):
@@ -219,7 +219,7 @@ def generate_secure_password(
         required_chars.append(secrets.choice(numbers))
 
     if include_special:
-        special = "!@#$%^&*(),.?\":{}|<>"
+        special = "!@#$%^&*(),.?\":{}|<>\-_=\[\]\\\/~`+"
         chars += special
         required_chars.append(secrets.choice(special))
 

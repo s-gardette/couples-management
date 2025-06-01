@@ -1,0 +1,398 @@
+<!-- Shared Member Invitation Component -->
+<div x-data="memberInvitationForm(getHouseholdId())" class="member-invitation-component">
+    <!-- Invite Options -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <!-- Share Invite Code -->
+        <div class="border border-gray-200 rounded-lg p-6">
+            <div class="text-center">
+                <div class="mx-auto h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                    <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                    </svg>
+                </div>
+                <h4 class="text-sm font-medium text-gray-900 mb-2">Share Join Link</h4>
+                <p class="text-xs text-gray-600 mb-4">
+                    Share this link with family or roommates so they can join with one click
+                </p>
+                <div class="bg-gray-50 rounded-md p-3 mb-4">
+                    <div class="flex items-center justify-between">
+                        <span class="font-mono text-xs text-gray-900 truncate pr-2" x-text="getJoinLink()"></span>
+                        <button 
+                            @click="copyJoinLink()"
+                            class="ml-2 text-indigo-600 hover:text-indigo-500 text-sm font-medium whitespace-nowrap"
+                        >
+                            <span x-show="!copied">Copy Link</span>
+                            <span x-show="copied" class="text-green-600">Copied!</span>
+                        </button>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500">
+                    Anyone with this link can join your household
+                </p>
+                
+                <!-- Alternative: Show invite code for manual entry -->
+                <div class="mt-4 pt-4 border-t border-gray-100">
+                    <p class="text-xs text-gray-500 mb-2">Or share the invite code:</p>
+                    <div class="bg-gray-100 rounded px-3 py-2">
+                        <span class="font-mono text-sm font-bold text-gray-700" x-text="inviteCode"></span>
+                        <button 
+                            @click="copyInviteCode()"
+                            class="ml-2 text-indigo-600 hover:text-indigo-500 text-xs"
+                        >
+                            <span x-show="!codeCopied">Copy Code</span>
+                            <span x-show="codeCopied" class="text-green-600">Copied!</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Send Invites -->
+        <div class="border border-gray-200 rounded-lg p-6">
+            <div class="text-center">
+                <div class="mx-auto h-12 w-12 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+                    <svg class="h-6 w-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2 2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <h4 class="text-sm font-medium text-gray-900 mb-2">Send Email Invites</h4>
+                <p class="text-xs text-gray-600 mb-4">
+                    Send invitation emails directly to family members
+                </p>
+                <button 
+                    @click="showEmailForm = !showEmailForm"
+                    class="w-full bg-purple-600 text-white text-sm font-medium py-2 px-4 rounded-md hover:bg-purple-700 transition-colors"
+                >
+                    <span x-show="!showEmailForm">Add Email Addresses</span>
+                    <span x-show="showEmailForm">Hide Email Form</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Invite Form -->
+    <div x-show="showEmailForm" x-transition class="border border-gray-200 rounded-lg p-6">
+        <h4 class="text-sm font-medium text-gray-900 mb-4">Send Email Invitations</h4>
+        
+        <!-- Individual Member Invitation Form -->
+        <form 
+            :hx-post="`/households/${householdId}/invite-member`"
+            hx-target="#invite-results"
+            hx-swap="beforeend"
+            @submit="handleSingleInvite($event)"
+            x-data="{ inviting: false }"
+            class="space-y-4 mb-6"
+        >
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                    <input 
+                        type="email"
+                        name="email"
+                        required
+                        placeholder="john@example.com"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    >
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                    <select 
+                        name="role"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    >
+                        <option value="member">Member</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nickname (Optional)</label>
+                    <input 
+                        type="text"
+                        name="nickname"
+                        placeholder="e.g., Partner, Roommate"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    >
+                </div>
+            </div>
+            <button 
+                type="submit"
+                :disabled="inviting"
+                :class="inviting ? 'opacity-50 cursor-not-allowed' : ''"
+                class="w-full bg-indigo-600 text-white text-sm font-medium py-2 px-4 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+                <span x-show="!inviting">Send Invitation</span>
+                <span x-show="inviting" class="flex items-center justify-center">
+                    <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Sending...
+                </span>
+            </button>
+        </form>
+
+        <!-- Bulk Email Invitation -->
+        <div class="border-t pt-4">
+            <h5 class="text-sm font-medium text-gray-700 mb-3">Or add multiple emails at once:</h5>
+            <form @submit.prevent="sendBulkEmailInvites()">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Email Addresses (one per line)
+                        </label>
+                        <textarea 
+                            x-model="emailList"
+                            rows="4"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            placeholder="john@example.com&#10;jane@example.com&#10;..."
+                        ></textarea>
+                        <p class="mt-1 text-xs text-gray-500">
+                            Enter one email address per line. All will be added as Members.
+                        </p>
+                    </div>
+                    <button 
+                        type="submit"
+                        :disabled="!emailList.trim() || isSendingEmails"
+                        class="w-full bg-purple-600 text-white text-sm font-medium py-2 px-4 rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                        <span x-show="!isSendingEmails">Send Bulk Invitations</span>
+                        <span x-show="isSendingEmails">Sending...</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Results Container -->
+        <div id="invite-results" class="mt-4 space-y-2"></div>
+    </div>
+</div>
+
+<script>
+// Helper function to get household ID from different contexts
+function getHouseholdId() {
+    // First try: from the current context (modal)
+    if (typeof householdId !== 'undefined') {
+        return householdId;
+    }
+    
+    // Second try: from parent Alpine.js data (onboarding)
+    const element = document.querySelector('[x-data]');
+    if (element && element.__x && element.__x.$data.householdId) {
+        return element.__x.$data.householdId;
+    }
+    
+    // Third try: from URL params (onboarding)
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramHouseholdId = urlParams.get('household_id');
+    if (paramHouseholdId) {
+        return paramHouseholdId;
+    }
+    
+    // Fourth try: from global template variable (modal)
+    if (typeof window.householdId !== 'undefined') {
+        return window.householdId;
+    }
+    
+    console.warn('Could not determine household ID for member invitation');
+    return null;
+}
+
+function memberInvitationForm(householdId) {
+    return {
+        householdId: householdId,
+        inviteCode: '',
+        showEmailForm: false,
+        emailList: '',
+        copied: false,
+        codeCopied: false,
+        isSendingEmails: false,
+
+        async init() {
+            await this.loadHouseholdInfo();
+        },
+
+        async loadHouseholdInfo() {
+            if (!this.householdId) {
+                console.error('No household ID provided');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/households/${this.householdId}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${window.AuthUtils.getAccessToken()}`
+                    }
+                });
+
+                if (response.ok) {
+                    const household = await response.json();
+                    this.inviteCode = household.invite_code;
+                } else {
+                    console.error('Failed to load household info');
+                }
+            } catch (error) {
+                console.error('Error loading household info:', error);
+            }
+        },
+
+        getJoinLink() {
+            if (!this.inviteCode) return 'Loading...';
+            return `${window.location.origin}/join?code=${this.inviteCode}`;
+        },
+
+        async copyJoinLink() {
+            try {
+                const joinLink = this.getJoinLink();
+                await navigator.clipboard.writeText(joinLink);
+                this.copied = true;
+                setTimeout(() => {
+                    this.copied = false;
+                }, 2000);
+            } catch (error) {
+                console.error('Failed to copy join link:', error);
+            }
+        },
+
+        async copyInviteCode() {
+            try {
+                await navigator.clipboard.writeText(this.inviteCode);
+                this.codeCopied = true;
+                setTimeout(() => {
+                    this.codeCopied = false;
+                }, 2000);
+            } catch (error) {
+                console.error('Failed to copy invite code:', error);
+            }
+        },
+
+        handleSingleInvite(event) {
+            // Set loading state
+            event.target.querySelector('[x-data]').__x.$data.inviting = true;
+        },
+
+        async sendBulkEmailInvites() {
+            if (!this.emailList.trim()) return;
+
+            this.isSendingEmails = true;
+            
+            const emails = this.emailList
+                .split('\n')
+                .map(email => email.trim())
+                .filter(email => email && email.includes('@'));
+
+            try {
+                // Send individual invitations for each email
+                const promises = emails.map(email => 
+                    fetch(`/households/${this.householdId}/invite-member`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'Authorization': `Bearer ${window.AuthUtils.getAccessToken()}`
+                        },
+                        body: new URLSearchParams({
+                            email: email,
+                            role: 'member',
+                            nickname: ''
+                        })
+                    })
+                );
+
+                const responses = await Promise.all(promises);
+                
+                // Display results
+                let successCount = 0;
+                for (let i = 0; i < responses.length; i++) {
+                    const response = responses[i];
+                    const email = emails[i];
+                    
+                    if (response.ok) {
+                        successCount++;
+                        const resultHtml = await response.text();
+                        document.getElementById('invite-results').insertAdjacentHTML('beforeend', resultHtml);
+                    } else {
+                        // Show error for this email
+                        const errorHtml = `
+                            <div class="p-3 bg-red-50 border border-red-200 rounded-md">
+                                <div class="flex">
+                                    <div class="flex-shrink-0">
+                                        <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="ml-3">
+                                        <h3 class="text-sm font-medium text-red-800">Failed to invite ${email}</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        document.getElementById('invite-results').insertAdjacentHTML('beforeend', errorHtml);
+                    }
+                }
+
+                // Show summary
+                if (successCount > 0) {
+                    const summaryHtml = `
+                        <div class="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-sm font-medium text-blue-800">Bulk Invitation Summary</h3>
+                                    <div class="mt-2 text-sm text-blue-700">
+                                        <p>Processed ${emails.length} email(s). ${successCount} successful invitations.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('invite-results').insertAdjacentHTML('beforeend', summaryHtml);
+                }
+                
+                this.emailList = '';
+                this.showEmailForm = false;
+            } catch (error) {
+                console.error('Error sending bulk email invites:', error);
+                const errorHtml = `
+                    <div class="p-3 bg-red-50 border border-red-200 rounded-md">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-red-800">Bulk Invitation Error</h3>
+                                <div class="mt-2 text-sm text-red-700">
+                                    <p>Failed to send bulk invitations. Please try again.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('invite-results').insertAdjacentHTML('beforeend', errorHtml);
+            } finally {
+                this.isSendingEmails = false;
+            }
+        }
+    }
+}
+
+// Handle HTMX events
+document.addEventListener('htmx:afterRequest', function(event) {
+    if (event.target.getAttribute('hx-post') && event.target.getAttribute('hx-post').includes('invite-member')) {
+        // Reset form after successful invitation
+        if (event.detail.xhr.status === 200) {
+            event.target.reset();
+            // Reset loading state
+            const loadingData = event.target.querySelector('[x-data]');
+            if (loadingData && loadingData.__x) {
+                loadingData.__x.$data.inviting = false;
+            }
+        }
+    }
+});
+</script> 

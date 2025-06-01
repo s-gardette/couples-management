@@ -1,0 +1,56 @@
+<!-- Invite Member Modal -->
+<div 
+    class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+    x-show="showInviteModal"
+    x-transition:enter="ease-out duration-300"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="ease-in duration-200"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    @click="showInviteModal = false"
+>
+    <div 
+        class="relative top-20 mx-auto p-5 border w-11/12 md:w-4/5 lg:w-3/4 xl:w-2/3 shadow-lg rounded-md bg-white"
+        @click.stop
+        x-transition:enter="ease-out duration-300"
+        x-transition:enter-start="opacity-0 transform scale-95"
+        x-transition:enter-end="opacity-100 transform scale-100"
+        x-transition:leave="ease-in duration-200"
+        x-transition:leave-start="opacity-100 transform scale-100"
+        x-transition:leave-end="opacity-0 transform scale-95"
+    >
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between pb-4 border-b">
+            <h3 class="text-lg font-semibold text-gray-900">Invite Members to {{ household.name }}</h3>
+            <button 
+                @click="showInviteModal = false"
+                class="text-gray-400 hover:text-gray-600 focus:outline-none"
+            >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="mt-4">
+            <!-- Include shared member invitation component -->
+            <script>
+                // Make household ID available for the shared component
+                window.householdId = '{{ household.id }}';
+            </script>
+            {% include 'partials/member_invitation_form.html' %}
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="mt-6 pt-4 border-t flex justify-end">
+            <button 
+                @click="showInviteModal = false"
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+                Done
+            </button>
+        </div>
+    </div>
+</div> 

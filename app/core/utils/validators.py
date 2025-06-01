@@ -56,7 +56,7 @@ def validate_password_strength(password: str) -> tuple[bool, list[str]]:
         errors.append("Password must contain at least one number")
 
     # Check for special characters
-    if settings.auth_password_require_special and not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+    if settings.auth_password_require_special and not re.search(r'[!@#$%^&*(),.?":{}|<>\-_=\[\]\\\/~`+]', password):
         errors.append("Password must contain at least one special character")
 
     return len(errors) == 0, errors

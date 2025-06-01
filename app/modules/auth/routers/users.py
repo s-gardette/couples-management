@@ -13,6 +13,7 @@ from app.modules.auth.dependencies import (
     get_current_admin_user,
     get_current_user,
     get_current_verified_user,
+    get_current_user_optional,
 )
 from app.modules.auth.models.user import User
 from app.modules.auth.schemas.auth import AuthResponse
@@ -189,19 +190,20 @@ async def get_user_by_id(
 @router.post("/check-email", response_model=AvailabilityResponse)
 async def check_email_availability(
     email_check: EmailAvailability,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_optional)
 ):
     """
     Check if email address is available.
 
     Validates if an email address is available for use.
+    Public endpoint for registration, but can exclude current user if authenticated.
     """
     user_service = UserService(db)
 
     is_available = await user_service.check_email_availability(
         email=email_check.email,
-        exclude_user_id=current_user.id
+        exclude_user_id=current_user.id if current_user else None
     )
 
     return AvailabilityResponse(
@@ -213,19 +215,20 @@ async def check_email_availability(
 @router.post("/check-username", response_model=AvailabilityResponse)
 async def check_username_availability(
     username_check: UsernameAvailability,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_optional)
 ):
     """
     Check if username is available.
 
     Validates if a username is available for use.
+    Public endpoint for registration, but can exclude current user if authenticated.
     """
     user_service = UserService(db)
 
     is_available = await user_service.check_username_availability(
         username=username_check.username,
-        exclude_user_id=current_user.id
+        exclude_user_id=current_user.id if current_user else None
     )
 
     return AvailabilityResponse(

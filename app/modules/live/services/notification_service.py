@@ -162,16 +162,33 @@ class NotificationService:
         """Get all pending notifications."""
         return [n for n in self.pending_notifications if not n["dismissed"]]
 
-    def dismiss_notification(self, notification_id: str) -> bool:
-        """Dismiss a specific notification."""
+    def dismiss_notification(self, notification_id: str, user_id: Optional[str] = None) -> bool:
+        """
+        Dismiss a specific notification for a user.
+        
+        Args:
+            notification_id: Notification ID
+            user_id: User ID (optional, for user-specific notifications)
+            
+        Returns:
+            True if notification was dismissed, False otherwise
+        """
         for notification in self.pending_notifications:
             if notification["id"] == notification_id:
                 notification["dismissed"] = True
                 return True
         return False
 
-    def clear_all_notifications(self) -> int:
-        """Clear all notifications and return count of cleared notifications."""
+    def clear_all_notifications(self, user_id: Optional[str] = None) -> int:
+        """
+        Clear all notifications for a user.
+        
+        Args:
+            user_id: User ID (optional, for user-specific notifications)
+            
+        Returns:
+            Count of cleared notifications
+        """
         count = len([n for n in self.pending_notifications if not n["dismissed"]])
         for notification in self.pending_notifications:
             notification["dismissed"] = True
@@ -257,6 +274,54 @@ class NotificationService:
 
     def data_conflict(self, action: str) -> Dict[str, Any]:
         """Notification for data conflicts."""
-        return self.create_warning_notification(
-            f"The data has been updated by another user. Please refresh and try {action} again."
-        ) 
+        return self.create_error_notification(
+            f"Data conflict detected while {action}. Please refresh and try again.",
+            include_retry=True
+        )
+
+    # Additional methods for API compatibility
+    def create_toast(
+        self,
+        message: str,
+        type: str = "info",
+        duration: Optional[int] = None,
+        user_id: Optional[str] = None
+    ) -> str:
+        """
+        Create a toast notification (API-compatible method).
+        
+        Args:
+            message: Notification message
+            type: Notification type (success, error, warning, info)
+            duration: Duration in milliseconds
+            user_id: User ID (for user-specific notifications)
+            
+        Returns:
+            Notification ID
+        """
+        try:
+            notification_type = NotificationType(type)
+        except ValueError:
+            notification_type = NotificationType.INFO
+        
+        notification = self.create_notification(
+            message=message,
+            notification_type=notification_type,
+            duration=duration
+        )
+        
+        return notification["id"]
+
+    def get_user_notifications(self, user_id: str) -> List[Dict[str, Any]]:
+        """
+        Get notifications for a specific user.
+        
+        Args:
+            user_id: User ID
+            
+        Returns:
+            List of user notifications
+        """
+        # For now, return all pending notifications
+        # In a real implementation, this would filter by user_id
+        return self.get_pending_notifications() 

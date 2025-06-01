@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Join Error{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-red-50 via-white to-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="text-center">
+            <div class="mx-auto h-16 w-16 bg-red-100 rounded-full flex items-center justify-center">
+                <svg class="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.084 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+            </div>
+            <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
+                Unable to Join Household
+            </h2>
+            <p class="mt-2 text-sm text-gray-600">
+                There was a problem with your invitation link
+            </p>
+        </div>
+    </div>
+
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+            <!-- Error Message -->
+            <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">{{ error }}</h3>
+                        {% if code %}
+                        <div class="mt-2 text-sm text-red-700">
+                            <p>Invite code: <code class="font-mono">{{ code }}</code></p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Possible Solutions -->
+            <div class="space-y-4">
+                <h3 class="text-sm font-medium text-gray-900">What you can try:</h3>
+                <ul class="text-sm text-gray-600 space-y-2">
+                    <li class="flex items-start">
+                        <span class="flex-shrink-0 w-1.5 h-1.5 bg-gray-400 rounded-full mt-2 mr-3"></span>
+                        <span>Check that you copied the full invitation link</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="flex-shrink-0 w-1.5 h-1.5 bg-gray-400 rounded-full mt-2 mr-3"></span>
+                        <span>Ask the household admin to send you a new invitation</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="flex-shrink-0 w-1.5 h-1.5 bg-gray-400 rounded-full mt-2 mr-3"></span>
+                        <span>Try joining manually with the invite code if you have one</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Manual Join Form -->
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <h4 class="text-sm font-medium text-gray-900 mb-4">Try joining manually:</h4>
+                <form action="/onboarding/join-household" method="get" class="space-y-4">
+                    <div>
+                        <label for="manual_code" class="block text-sm font-medium text-gray-700">
+                            Invite Code
+                        </label>
+                        <input 
+                            type="text" 
+                            id="manual_code" 
+                            name="code" 
+                            value="{{ code if code else '' }}"
+                            placeholder="Enter your invite code"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        >
+                    </div>
+                    <button 
+                        type="submit"
+                        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                        Try to Join
+                    </button>
+                </form>
+            </div>
+
+            <!-- Back Link -->
+            <div class="mt-6 text-center">
+                <a href="/" class="text-sm text-gray-500 hover:text-gray-700">
+                    ← Back to Home
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

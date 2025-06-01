@@ -2,7 +2,7 @@
 Authentication API endpoints.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Response, Form
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -25,18 +25,74 @@ from app.modules.auth.schemas.auth import (
     TokenRefreshRequest,
     TokenRefreshResponse,
 )
-from app.modules.auth.schemas.user import UserResponse
+from app.modules.auth.schemas.user import UserResponse, EmailAvailability, UsernameAvailability, AvailabilityResponse
 from app.modules.auth.services.auth_service import AuthService
 from app.modules.auth.utils.password import validate_password_strength_detailed
+from app.modules.auth.services.user_service import UserService
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-# REMOVED: Public registration endpoint - users can only be created by admins
-# @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
-# async def register(...):
-#     """Public registration is disabled. Users must be created by administrators."""
-#     pass
+@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+async def register(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db)
+):
+    """
+    Register a new user account.
+    
+    Creates a new user account with email verification required.
+    Supports both form data (web) and JSON (mobile API).
+    """
+    auth_service = AuthService(db)
+
+    # Check content type to determine how to parse the data
+    content_type = request.headers.get("content-type", "")
+    
+    if "application/json" in content_type:
+        # Handle JSON data (mobile API)
+        body = await request.json()
+        user_email = body.get("email")
+        user_username = body.get("username")
+        user_password = body.get("password")
+        user_first_name = body.get("first_name")
+        user_last_name = body.get("last_name")
+    else:
+        # Handle form data (web form)
+        form_data = await request.form()
+        user_email = form_data.get("email")
+        user_username = form_data.get("username")
+        user_password = form_data.get("password")
+        user_first_name = form_data.get("first_name")
+        user_last_name = form_data.get("last_name")
+
+    # Validate required fields
+    if not all([user_email, user_username, user_password, user_first_name, user_last_name]):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="All fields are required"
+        )
+
+    success, message, user_data = await auth_service.register_user(
+        email=user_email,
+        username=user_username,
+        password=user_password,
+        first_name=user_first_name,
+        last_name=user_last_name
+    )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=message
+        )
+
+    return RegisterResponse(
+        message=message,
+        user_id=str(user_data.id) if user_data else None,
+        email_verification_required=True
+    )
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -296,14 +352,15 @@ async def resend_verification(
 
 @router.post("/check-password-strength", response_model=PasswordStrengthResponse)
 async def check_password_strength(
-    password_data: PasswordStrengthCheck
+    password: str = Form(...)
 ):
     """
     Check password strength and get improvement suggestions.
 
     Validates password strength and provides feedback.
+    Accepts form data from HTMX requests.
     """
-    result = validate_password_strength_detailed(password_data.password)
+    result = validate_password_strength_detailed(password)
 
     return PasswordStrengthResponse(
         is_valid=result["is_valid"],
@@ -324,3 +381,51 @@ async def get_current_user_info(
     Returns the profile information of the currently authenticated user.
     """
     return UserResponse.model_validate(current_user)
+
+
+@router.post("/check-email", response_model=AvailabilityResponse)
+async def check_email_availability(
+    email: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Check if email address is available.
+
+    Public endpoint for registration to validate email availability.
+    Accepts form data from HTMX requests.
+    """
+    user_service = UserService(db)
+
+    is_available = await user_service.check_email_availability(
+        email=email,
+        exclude_user_id=None
+    )
+
+    return AvailabilityResponse(
+        available=is_available,
+        message="Email is available" if is_available else "Email is already in use"
+    )
+
+
+@router.post("/check-username", response_model=AvailabilityResponse)
+async def check_username_availability(
+    username: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Check if username is available.
+
+    Public endpoint for registration to validate username availability.
+    Accepts form data from HTMX requests.
+    """
+    user_service = UserService(db)
+
+    is_available = await user_service.check_username_availability(
+        username=username,
+        exclude_user_id=None
+    )
+
+    return AvailabilityResponse(
+        available=is_available,
+        message="Username is available" if is_available else "Username is already taken"
+    )

@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Join {{ household.name }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="text-center">
+            <div class="mx-auto h-16 w-16 bg-indigo-100 rounded-full flex items-center justify-center">
+                <svg class="h-8 w-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                </svg>
+            </div>
+            <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
+                Join {{ household.name }}
+            </h2>
+            <p class="mt-2 text-sm text-gray-600">
+                You've been invited to join this household
+            </p>
+        </div>
+    </div>
+
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+            <!-- Household Info -->
+            <div class="mb-6 p-4 bg-indigo-50 rounded-lg">
+                <div class="text-center">
+                    <h3 class="text-lg font-medium text-indigo-900 mb-2">{{ household.name }}</h3>
+                    <p class="text-sm text-indigo-700">
+                        Join this household to start tracking expenses together
+                    </p>
+                </div>
+            </div>
+
+            {% if current_user %}
+                <!-- Join Form -->
+                <form 
+                    hx-post="/join"
+                    hx-target="#join-result"
+                    hx-swap="innerHTML"
+                    x-data="{ joining: false }"
+                    @submit="joining = true"
+                >
+                    <input type="hidden" name="code" value="{{ code }}">
+                    
+                    <div class="mb-6 text-center">
+                        <p class="text-sm text-gray-600 mb-4">
+                            You're signed in as <strong>{{ current_user.email }}</strong>
+                        </p>
+                        <button 
+                            type="submit"
+                            :disabled="joining"
+                            :class="joining ? 'opacity-50 cursor-not-allowed' : ''"
+                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <span x-show="!joining">Join {{ household.name }}</span>
+                            <span x-show="joining" class="flex items-center">
+                                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Joining...
+                            </span>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Result Container -->
+                <div id="join-result"></div>
+
+                <!-- Alternative Actions -->
+                <div class="mt-6 text-center border-t pt-6">
+                    <p class="text-xs text-gray-500 mb-2">Not the right account?</p>
+                    <a href="/logout?next={{ request.url }}" class="text-sm text-indigo-600 hover:text-indigo-500">
+                        Sign out and use a different account
+                    </a>
+                </div>
+            {% else %}
+                <!-- Not Signed In -->
+                <div class="text-center">
+                    <p class="text-sm text-gray-600 mb-6">
+                        You need to sign in to join this household
+                    </p>
+                    <div class="space-y-3">
+                        <a href="/login?next={{ request.url }}" 
+                           class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Sign In to Join
+                        </a>
+                        <a href="/register?next={{ request.url }}" 
+                           class="w-full flex justify-center py-3 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Create Account & Join
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Back Link -->
+            <div class="mt-6 text-center">
+                <a href="/" class="text-sm text-gray-500 hover:text-gray-700">
+                    ← Back to Home
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Handle HTMX events
+document.addEventListener('htmx:afterRequest', function(event) {
+    if (event.target.getAttribute('hx-post') === '/join') {
+        // Reset loading state
+        const form = event.target;
+        const alpineData = form.__x;
+        if (alpineData) {
+            alpineData.$data.joining = false;
+        }
+        
+        // Clean up localStorage on successful join
+        if (event.detail.xhr.status === 200) {
+            localStorage.removeItem('household_invite_code');
+            localStorage.removeItem('household_invite_timestamp');
+            console.log('Cleaned up invite code from localStorage after successful join');
+        }
+    }
+});
+
+// Store invite code in localStorage for seamless registration flow
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviteCode = urlParams.get('code') || '{{ code }}';
+    
+    if (inviteCode) {
+        // Store the new invite code
+        localStorage.setItem('household_invite_code', inviteCode);
+        localStorage.setItem('household_invite_timestamp', Date.now().toString());
+        console.log('Stored invite code for later use:', inviteCode);
+    }
+    
+    // Clean up any expired invite codes
+    cleanupExpiredInviteCodes();
+});
+
+// Function to clean up expired invite codes
+function cleanupExpiredInviteCodes() {
+    const storedCode = localStorage.getItem('household_invite_code');
+    const timestamp = localStorage.getItem('household_invite_timestamp');
+    
+    if (storedCode && timestamp) {
+        const codeAge = Date.now() - parseInt(timestamp);
+        const oneHour = 60 * 60 * 1000;
+        
+        if (codeAge >= oneHour) {
+            localStorage.removeItem('household_invite_code');
+            localStorage.removeItem('household_invite_timestamp');
+            console.log('Cleaned up expired invite code:', storedCode);
+        }
+    }
+}
+
+// Auto-join household if user is authenticated and has stored invite code
+{% if current_user %}
+document.addEventListener('DOMContentLoaded', function() {
+    const storedCode = localStorage.getItem('household_invite_code');
+    const timestamp = localStorage.getItem('household_invite_timestamp');
+    
+    // Check if code is recent (within 1 hour)
+    if (storedCode && timestamp) {
+        const codeAge = Date.now() - parseInt(timestamp);
+        const oneHour = 60 * 60 * 1000;
+        
+        if (codeAge < oneHour && storedCode === '{{ code }}') {
+            // Auto-join the household
+            console.log('Auto-joining household with stored code:', storedCode);
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/join';
+            
+            const codeInput = document.createElement('input');
+            codeInput.type = 'hidden';
+            codeInput.name = 'code';
+            codeInput.value = storedCode;
+            
+            form.appendChild(codeInput);
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %} 

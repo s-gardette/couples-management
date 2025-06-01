@@ -201,6 +201,27 @@ Contact the administrator for access to this application
                 
                 // Redirect after a brief moment to show the welcome message
                 setTimeout(() => {
+                    // Check for stored household invite code
+                    const storedCode = localStorage.getItem('household_invite_code');
+                    const timestamp = localStorage.getItem('household_invite_timestamp');
+                    
+                    if (storedCode && timestamp) {
+                        const codeAge = Date.now() - parseInt(timestamp);
+                        const oneHour = 60 * 60 * 1000;
+                        
+                        if (codeAge < oneHour) {
+                            // Redirect to join household with stored code
+                            console.log('Redirecting to join household with stored code:', storedCode);
+                            window.location.href = `/join?code=${storedCode}`;
+                            return;
+                        } else {
+                            // Clean up expired code
+                            localStorage.removeItem('household_invite_code');
+                            localStorage.removeItem('household_invite_timestamp');
+                        }
+                    }
+                    
+                    // Standard redirect logic
                     const redirectUrl = window.AuthUtils ? AuthUtils.getRedirectUrl() : '/';
                     window.location.href = redirectUrl;
                 }, 800); // Brief delay to show the welcome message

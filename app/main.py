@@ -5,11 +5,11 @@ Main FastAPI application entry point.
 import logging
 from contextlib import asynccontextmanager
 from uuid import UUID
-from fastapi import FastAPI, Request, Depends, HTTPException, status
+from fastapi import FastAPI, Request, Depends, HTTPException, status, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 
 from app.config import settings
 from app.database import get_db
@@ -146,6 +146,36 @@ async def login_page(request: Request):
         {
             "config": settings,
             "admin_contact_email": settings.admin_contact_email
+        }
+    )
+
+
+# Logout route (frontend)
+@app.get("/logout", response_class=HTMLResponse)
+async def logout_page(
+    request: Request,
+    next: str = "/"
+):
+    """Frontend logout - clears cookies and redirects."""
+    response = RedirectResponse(url=next, status_code=302)
+    response.delete_cookie(key="access_token", samesite="lax")
+    response.delete_cookie(key="refresh_token", samesite="lax")
+    return response
+
+
+# Register page (redirects to login since registration is disabled)
+@app.get("/register", response_class=HTMLResponse)
+async def register_page(
+    request: Request,
+    next: str = "/"
+):
+    """Register page - public registration."""
+    return templates.TemplateResponse(
+        request,
+        "auth/register.html",
+        {
+            "config": settings,
+            "next_url": next
         }
     )
 
@@ -2100,6 +2130,578 @@ async def payment_edit_partial(
         return HTMLResponse("<div class='text-red-500'>Error loading payment for editing</div>", status_code=500)
     finally:
         db.close()
+
+
+# ============================================================================
+# HOUSEHOLD MEMBER MANAGEMENT ROUTES (for HTMX forms)
+# ============================================================================
+
+@app.post("/households/{household_id}/invite-member")
+async def invite_member_frontend(
+    household_id: str,
+    request: Request,
+    current_user = Depends(get_current_user_from_cookie_or_header)
+):
+    """Frontend route for inviting members via HTMX forms."""
+    if settings.require_authentication_for_all and not current_user:
+        return HTMLResponse("<div class='text-red-500'>Authentication required</div>", status_code=401)
+    
+    # Delegate to the API endpoint
+    from app.modules.expenses.routers.households import invite_member
+    from fastapi import Form
+    
+    # Get form data from request
+    form = await request.form()
+    email = form.get("email")
+    role = form.get("role", "member")
+    nickname = form.get("nickname")
+    
+    try:
+        household_uuid = UUID(household_id)
+        return await invite_member(
+            household_id=household_uuid,
+            email=email,
+            role=role,
+            nickname=nickname,
+            current_user=current_user
+        )
+    except ValueError:
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(
+            content="""
+            <div class="p-4 bg-red-50 border border-red-200 rounded-md">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Invalid Household ID</h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            <p>The household ID format is invalid.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """,
+            status_code=400
+        )
+
+
+@app.put("/households/{household_id}/members/{user_id}")
+async def update_member_frontend(
+    household_id: str,
+    user_id: str,
+    request: Request,
+    current_user = Depends(get_current_user_from_cookie_or_header)
+):
+    """Frontend route for updating members via HTMX forms."""
+    if settings.require_authentication_for_all and not current_user:
+        return HTMLResponse("<div class='text-red-500'>Authentication required</div>", status_code=401)
+    
+    # Delegate to the API endpoint
+    from app.modules.expenses.routers.households import update_member
+    
+    # Get form data from request
+    form = await request.form()
+    nickname = form.get("nickname")
+    role = form.get("role", "member")
+    
+    try:
+        household_uuid = UUID(household_id)
+        user_uuid = UUID(user_id)
+        return await update_member(
+            household_id=household_uuid,
+            user_id=user_uuid,
+            nickname=nickname,
+            role=role,
+            current_user=current_user
+        )
+    except ValueError:
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(
+            content="""
+            <div class="p-4 bg-red-50 border border-red-200 rounded-md">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Invalid ID Format</h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            <p>The household or user ID format is invalid.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """,
+            status_code=400
+        )
+
+
+@app.delete("/households/{household_id}/members/{user_id}")
+async def remove_member_frontend(
+    household_id: str,
+    user_id: str,
+    current_user = Depends(get_current_user_from_cookie_or_header)
+):
+    """Frontend route for removing members via HTMX forms."""
+    if settings.require_authentication_for_all and not current_user:
+        return HTMLResponse("<div class='text-red-500'>Authentication required</div>", status_code=401)
+    
+    # Delegate to the API endpoint
+    from app.modules.expenses.routers.households import remove_member
+    
+    try:
+        household_uuid = UUID(household_id)
+        user_uuid = UUID(user_id)
+        return await remove_member(
+            household_id=household_uuid,
+            user_id=user_uuid,
+            current_user=current_user
+        )
+    except ValueError:
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(
+            content="""
+            <div class="p-4 bg-red-50 border border-red-200 rounded-md">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Invalid ID Format</h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            <p>The household or user ID format is invalid.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """,
+            status_code=400
+        )
+
+
+@app.get("/join")
+async def join_household_page(
+    request: Request,
+    code: str = None,
+    current_user = Depends(get_current_user_optional)
+):
+    """Page for joining a household using an invite code from a shared link."""
+    if not code:
+        return RedirectResponse(url="/", status_code=302)
+    
+    try:
+        # Find household by invite code (publicly accessible)
+        db = next(get_db())
+        from app.modules.expenses.models.household import Household
+        from app.modules.expenses.models.user_household import UserHousehold
+        
+        household = db.query(Household).filter(Household.invite_code == code).first()
+        
+        if not household:
+            return templates.TemplateResponse(
+                request,
+                "join_error.html",
+                {
+                    "error": "Invalid or expired invite code",
+                    "code": code
+                }
+            )
+        
+        # If user is not authenticated, show join page with login options
+        if not current_user:
+            return templates.TemplateResponse(
+                request,
+                "join_household.html",
+                {
+                    "household": household,
+                    "code": code,
+                    "current_user": None
+                }
+            )
+        
+        # Check if user is already a member
+        existing_membership = db.query(UserHousehold).filter(
+            UserHousehold.household_id == household.id,
+            UserHousehold.user_id == current_user.id,
+            UserHousehold.is_active == True
+        ).first()
+        
+        if existing_membership:
+            return RedirectResponse(url=f"/households/{household.id}", status_code=302)
+        
+        # User is authenticated but not a member - show join page
+        return templates.TemplateResponse(
+            request,
+            "join_household.html",
+            {
+                "household": household,
+                "code": code,
+                "current_user": current_user
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in join page: {e}")
+        return templates.TemplateResponse(
+            request,
+            "join_error.html",
+            {
+                "error": "An error occurred while processing your request",
+                "code": code
+            }
+        )
+    finally:
+        db.close()
+
+
+@app.post("/join")
+async def join_household_action(
+    request: Request,
+    code: str = Form(...),
+    current_user = Depends(get_current_user_from_cookie_or_header)
+):
+    """Process joining a household using an invite code."""
+    if settings.require_authentication_for_all and not current_user:
+        return HTMLResponse("Authentication required", status_code=401)
+    
+    try:
+        db = next(get_db())
+        
+        # Find household by invite code
+        household = db.query(Household).filter(Household.invite_code == code).first()
+        
+        if not household:
+            return HTMLResponse(
+                """
+                <div class="p-3 bg-red-50 border border-red-200 rounded-md">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">Invalid Invite Code</h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <p>The invite code is invalid or has expired.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                """,
+                status_code=400
+            )
+        
+        # Check if user is already a member
+        existing_membership = db.query(HouseholdMember).filter(
+            HouseholdMember.household_id == household.id,
+            HouseholdMember.user_id == current_user.id
+        ).first()
+        
+        if existing_membership:
+            return HTMLResponse(
+                f"""
+                <div class="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-blue-800">Already a Member</h3>
+                            <div class="mt-2 text-sm text-blue-700">
+                                <p>You're already a member of {household.name}!</p>
+                                <a href="/households/{household.id}" class="font-medium underline">Go to household</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <script>
+                    // Clean up localStorage since user is already a member
+                    localStorage.removeItem('household_invite_code');
+                    localStorage.removeItem('household_invite_timestamp');
+                    console.log('Cleaned up invite code from localStorage - user already a member');
+                    
+                    setTimeout(() => window.location.href = '/households/{household.id}', 2000);
+                </script>
+                """
+            )
+        
+        # Add user as a member
+        new_member = HouseholdMember(
+            household_id=household.id,
+            user_id=current_user.id,
+            role="member",
+            nickname=None
+        )
+        db.add(new_member)
+        db.commit()
+        
+        return HTMLResponse(
+            f"""
+            <div class="p-3 bg-green-50 border border-green-200 rounded-md">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-green-800">Welcome to {household.name}!</h3>
+                        <div class="mt-2 text-sm text-green-700">
+                            <p>You've successfully joined the household.</p>
+                            <a href="/households/{household.id}" class="font-medium underline">Go to household</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <script>
+                // Clean up localStorage after successful join
+                localStorage.removeItem('household_invite_code');
+                localStorage.removeItem('household_invite_timestamp');
+                console.log('Cleaned up invite code from localStorage after successful join');
+                
+                setTimeout(() => window.location.href = '/households/{household.id}', 2000);
+            </script>
+            """
+        )
+        
+    except Exception as e:
+        logger.error(f"Error joining household: {e}")
+        return HTMLResponse(
+            """
+            <div class="p-3 bg-red-50 border border-red-200 rounded-md">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Error</h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            <p>An error occurred while joining the household. Please try again.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """,
+            status_code=500
+        )
+    finally:
+        db.close()
+
+
+# ============================================================================
+# API COUNTERPARTS FOR MOBILE APP DEVELOPMENT
+# ============================================================================
+
+@app.get("/api/join")
+async def join_household_info_api(
+    code: str,
+    current_user = Depends(get_current_user_from_cookie_or_header)
+):
+    """API endpoint for getting household join information using an invite code."""
+    if not code:
+        raise HTTPException(status_code=400, detail="Invite code is required")
+    
+    try:
+        db = next(get_db())
+        from app.modules.expenses.models.household import Household
+        from app.modules.expenses.models.user_household import UserHousehold
+        
+        # Find household by invite code
+        household = db.query(Household).filter(Household.invite_code == code).first()
+        
+        if not household:
+            raise HTTPException(status_code=404, detail="Invalid or expired invite code")
+        
+        # Check if user is already a member (if authenticated)
+        is_member = False
+        if current_user:
+            existing_membership = db.query(UserHousehold).filter(
+                UserHousehold.household_id == household.id,
+                UserHousehold.user_id == current_user.id,
+                UserHousehold.is_active == True
+            ).first()
+            is_member = existing_membership is not None
+        
+        return {
+            "success": True,
+            "household": {
+                "id": str(household.id),
+                "name": household.name,
+                "description": household.description,
+                "invite_code": household.invite_code
+            },
+            "user_status": {
+                "is_authenticated": current_user is not None,
+                "is_member": is_member,
+                "user_id": str(current_user.id) if current_user else None,
+                "email": current_user.email if current_user else None
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in join API: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred while processing your request")
+    finally:
+        db.close()
+
+
+@app.post("/api/join")
+async def join_household_api(
+    code: str,
+    current_user = Depends(get_current_user_from_cookie_or_header)
+):
+    """API endpoint for joining a household using an invite code."""
+    if settings.require_authentication_for_all and not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    if not code:
+        raise HTTPException(status_code=400, detail="Invite code is required")
+    
+    try:
+        db = next(get_db())
+        from app.modules.expenses.models.household import Household
+        from app.modules.expenses.models.user_household import UserHousehold
+        from app.modules.expenses.models.household_member import HouseholdMember
+        
+        # Find household by invite code
+        household = db.query(Household).filter(Household.invite_code == code).first()
+        
+        if not household:
+            raise HTTPException(status_code=404, detail="Invalid or expired invite code")
+        
+        # Check if user is already a member
+        existing_membership = db.query(UserHousehold).filter(
+            UserHousehold.household_id == household.id,
+            UserHousehold.user_id == current_user.id,
+            UserHousehold.is_active == True
+        ).first()
+        
+        if existing_membership:
+            return {
+                "success": True,
+                "message": f"You're already a member of {household.name}",
+                "household": {
+                    "id": str(household.id),
+                    "name": household.name,
+                    "description": household.description
+                },
+                "action": "already_member"
+            }
+        
+        # Add user as a member (using the new UserHousehold model)
+        new_membership = UserHousehold(
+            user_id=current_user.id,
+            household_id=household.id,
+            role="member",
+            nickname=None,
+            is_active=True
+        )
+        db.add(new_membership)
+        db.commit()
+        db.refresh(new_membership)
+        
+        return {
+            "success": True,
+            "message": f"Successfully joined {household.name}!",
+            "household": {
+                "id": str(household.id),
+                "name": household.name,
+                "description": household.description
+            },
+            "membership": {
+                "id": str(new_membership.id),
+                "role": new_membership.role.value,
+                "joined_at": new_membership.created_at.isoformat() if new_membership.created_at else None
+            },
+            "action": "joined"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error joining household via API: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred while joining the household")
+    finally:
+        db.close()
+
+
+@app.get("/api/households/{household_id}/join-info")
+async def household_join_info_api(
+    request: Request,
+    household_id: str,
+    current_user = Depends(get_current_user_from_cookie_or_header)
+):
+    """API endpoint for getting household join information by household ID."""
+    if settings.require_authentication_for_all and not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    try:
+        household_uuid = UUID(household_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid household ID format")
+    
+    try:
+        db = next(get_db())
+        from app.modules.expenses.models.household import Household
+        from app.modules.expenses.models.user_household import UserHousehold
+        
+        # Get household
+        household = db.query(Household).filter(Household.id == household_uuid).first()
+        if not household:
+            raise HTTPException(status_code=404, detail="Household not found")
+        
+        # Check if user has permission to access this household
+        has_permission = False
+        if current_user:
+            membership = db.query(UserHousehold).filter(
+                UserHousehold.household_id == household_uuid,
+                UserHousehold.user_id == current_user.id,
+                UserHousehold.is_active == True
+            ).first()
+            has_permission = membership is not None and membership.role in ["admin", "member"]
+        
+        if not has_permission:
+            raise HTTPException(status_code=403, detail="Access denied to this household")
+        
+        return {
+            "success": True,
+            "household": {
+                "id": str(household.id),
+                "name": household.name,
+                "description": household.description,
+                "invite_code": household.invite_code,
+                "join_link": f"{request.url.scheme}://{request.url.netloc}/join?code={household.invite_code}"
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting household join info: {e}")
+        raise HTTPException(status_code=500, detail="Error getting household information")
+    finally:
+        db.close()
+
+
+# Favicon route
+@app.get("/favicon.ico")
+async def favicon():
+    return FileResponse("static/favicon.svg", media_type="image/svg+xml")
 
 
 if __name__ == "__main__":

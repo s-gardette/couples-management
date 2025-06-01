@@ -7,15 +7,53 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">
-                Expenses
-                {% if household %}
-                <span class="text-gray-500">- {{ household.name }}</span>
-                {% endif %}
-            </h1>
-            <p class="mt-2 text-sm text-gray-600">Track and manage your household expenses</p>
+            <div class="flex items-center space-x-3">
+                <h1 class="text-3xl font-bold text-gray-900">
+                    Expenses
+                    {% if household %}
+                    <span class="text-gray-500">- {{ household.name }}</span>
+                    {% endif %}
+                </h1>
+                <!-- Live Status Indicator -->
+                <div 
+                    x-show="isLive" 
+                    x-transition
+                    class="flex items-center space-x-1 text-green-600"
+                >
+                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span class="text-xs font-medium">LIVE</span>
+                </div>
+            </div>
+            <p class="mt-2 text-sm text-gray-600">Track and manage your household expenses in real-time</p>
         </div>
         <div class="mt-4 sm:mt-0 flex space-x-3">
+            <!-- Live Controls -->
+            <div class="flex items-center space-x-2">
+                <!-- Auto-refresh toggle -->
+                <label class="inline-flex items-center text-sm">
+                    <input 
+                        type="checkbox" 
+                        x-model="autoRefresh"
+                        @change="toggleAutoRefresh()"
+                        class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                    >
+                    <span class="ml-2 text-gray-600">Auto-refresh</span>
+                </label>
+                
+                <!-- Manual refresh button -->
+                <button 
+                    @click="manualRefresh()"
+                    :class="isRefreshing ? 'animate-spin' : ''"
+                    class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                    title="Refresh expenses"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- View Mode Toggle -->
             <div class="flex rounded-md shadow-sm">
                 <button 
                     @click="viewMode = 'cards'; applyFilters()"
@@ -47,6 +85,85 @@
                 </svg>
                 Add Expense
             </a>
+        </div>
+    </div>
+
+    <!-- Live Stats Dashboard -->
+    <div 
+        x-show="showLiveStats" 
+        x-transition
+        class="grid grid-cols-2 md:grid-cols-4 gap-4"
+    >
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Total Expenses</dt>
+                            <dd class="text-lg font-medium text-gray-900" x-text="liveStats.total_expenses || 0"></dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Total Amount</dt>
+                            <dd class="text-lg font-medium text-gray-900" x-text="formatCurrency(liveStats.total_amount || 0)"></dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Pending</dt>
+                            <dd class="text-lg font-medium text-yellow-600" x-text="liveStats.pending_count || 0"></dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Unpaid</dt>
+                            <dd class="text-lg font-medium text-red-600" x-text="liveStats.unpaid_count || 0"></dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -217,140 +334,43 @@
             </button>
             <div class="text-sm text-gray-500">
                 <span x-text="totalExpenses"></span> expenses found
+                <span x-show="lastRefresh" class="ml-2 text-xs text-gray-400">
+                    (Last updated: <span x-text="lastRefresh"></span>)
+                </span>
             </div>
         </div>
     </div>
 
-    <!-- Expenses List -->
+    <!-- Live Expenses List -->
     <div 
         id="expenses-container"
-        hx-get="{% if household %}/partials/expenses/recent?household_id={{ household.id }}&view_type=list{% else %}/partials/expenses/recent?view_type=list{% endif %}"
-        hx-trigger="applyFilters from:body"
+        hx-get="/api/live/expenses{% if household %}?household_id={{ household.id }}{% endif %}"
+        hx-trigger="load, applyFilters from:body, liveRefresh from:body"
         hx-target="#expenses-container"
         hx-swap="innerHTML"
         hx-include="[name='search'], [name='category'], [name='date_range'], [name='payment_status'], [name='created_by'], [name='sort_by'], [name='min_amount'], [name='max_amount'], [name='view_mode']"
+        hx-indicator="#loading-indicator"
+        hx-headers='{"Accept": "text/html"}'
+        class="relative"
     >
-        <!-- Initial server-rendered content (default cards view) -->
-        {% if initial_expenses %}
-            <!-- Server-rendered expenses (cards view by default) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {% for expense in initial_expenses %}
-                    <div class="bg-white shadow rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-                        <div class="p-6">
-                            <!-- Header -->
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-lg font-semibold text-gray-900 truncate">{{ expense.title }}</h3>
-                                <div class="flex items-center space-x-2">
-                                    <!-- Payment Status Badge -->
-                                    {% if expense.payment_status == 'paid' %}
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                            Paid
-                                        </span>
-                                    {% elif expense.payment_status == 'pending' %}
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                            Pending
-                                        </span>
-                                    {% else %}
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                            Unpaid
-                                        </span>
-                                    {% endif %}
-                                </div>
-                            </div>
-
-                            <!-- Amount -->
-                            <div class="text-2xl font-bold text-gray-900 mb-4">
-                                ${{ "%.2f"|format(expense.amount) }}
-                            </div>
-
-                            <!-- Details -->
-                            <div class="space-y-2 text-sm text-gray-600">
-                                <div class="flex items-center">
-                                    <svg class="mr-2 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0h6m-6 0l-1 12a2 2 0 002 2h6a2 2 0 002-2L15 7"></path>
-                                    </svg>
-                                    {{ expense.category }}
-                                </div>
-                                <div class="flex items-center">
-                                    <svg class="mr-2 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0h6m-6 0l-1 12a2 2 0 002 2h6a2 2 0 002-2L15 7"></path>
-                                    </svg>
-                                    {{ expense.date }}
-                                </div>
-                                <div class="flex items-center">
-                                    <svg class="mr-2 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                    </svg>
-                                    by {{ expense.created_by.first_name }} {{ expense.created_by.last_name }}
-                                </div>
-                                {% if expense.description %}
-                                    <div class="mt-2 text-gray-700">
-                                        {{ expense.description[:100] }}{% if expense.description|length > 100 %}...{% endif %}
-                                    </div>
-                                {% endif %}
-                            </div>
-
-                            <!-- Actions -->
-                            <div class="mt-4 flex justify-end space-x-2">
-                                <button 
-                                    class="text-indigo-600 hover:text-indigo-500 text-sm font-medium"
-                                    onclick="viewExpenseDetails('{{ expense.id }}')"
-                                >
-                                    View Details
-                                </button>
-                                <button 
-                                    class="text-gray-600 hover:text-gray-500 text-sm font-medium"
-                                    onclick="editExpense('{{ expense.id }}')"
-                                >
-                                    Edit
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
+        <!-- Loading indicator -->
+        <div id="loading-indicator" class="htmx-indicator absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-lg">
+            <div class="text-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+                <p class="mt-2 text-sm text-gray-600">Loading expenses...</p>
             </div>
-        {% else %}
-            <!-- Loading state when no initial data -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div class="bg-white shadow rounded-lg p-6 animate-pulse">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
-                        <div class="h-6 bg-gray-200 rounded w-16"></div>
-                    </div>
-                    <div class="space-y-2">
-                        <div class="h-3 bg-gray-200 rounded w-1/2"></div>
-                        <div class="h-3 bg-gray-200 rounded w-2/3"></div>
-                    </div>
-                </div>
-                <div class="bg-white shadow rounded-lg p-6 animate-pulse">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
-                        <div class="h-6 bg-gray-200 rounded w-16"></div>
-                    </div>
-                    <div class="space-y-2">
-                        <div class="h-3 bg-gray-200 rounded w-1/2"></div>
-                        <div class="h-3 bg-gray-200 rounded w-2/3"></div>
-                    </div>
-                </div>
-                <div class="bg-white shadow rounded-lg p-6 animate-pulse">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
-                        <div class="h-6 bg-gray-200 rounded w-16"></div>
-                    </div>
-                    <div class="space-y-2">
-                        <div class="h-3 bg-gray-200 rounded w-1/2"></div>
-                        <div class="h-3 bg-gray-200 rounded w-2/3"></div>
-                    </div>
-                </div>
-            </div>
-        {% endif %}
-    </div>
+        </div>
 
-    <!-- Pagination -->
-    <div id="pagination-container" class="flex items-center justify-between">
-        <!-- Pagination will be loaded with expenses -->
+        <!-- Initial content will be loaded via HTMX -->
+        <div class="text-center py-12">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+            <p class="mt-2 text-sm text-gray-600">Loading expenses...</p>
+        </div>
     </div>
 </div>
+
+<!-- Toast Notifications Container -->
+<div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
 {% endblock %}
 
 {% block scripts %}
@@ -359,7 +379,19 @@ function expensesList() {
     return {
         viewMode: 'cards',
         showAdvancedFilters: false,
+        showLiveStats: true,
         totalExpenses: 0,
+        isLive: true,
+        isRefreshing: false,
+        autoRefresh: true,
+        refreshInterval: null,
+        lastRefresh: null,
+        liveStats: {
+            total_expenses: 0,
+            total_amount: 0,
+            pending_count: 0,
+            unpaid_count: 0
+        },
         filters: {
             search: '',
             category: '',
@@ -372,10 +404,109 @@ function expensesList() {
         },
         
         init() {
-            // Load initial data automatically
-            setTimeout(() => {
-                this.applyFilters();
-            }, 100);
+            // Load initial live stats
+            this.loadLiveStats();
+            
+            // Start auto-refresh if enabled
+            if (this.autoRefresh) {
+                this.startAutoRefresh();
+            }
+
+            // Setup live event listeners
+            this.setupLiveEventListeners();
+            
+            // Update last refresh time
+            this.updateLastRefreshTime();
+        },
+        
+        async loadLiveStats() {
+            try {
+                const householdParam = '{{ household.id if household else "" }}';
+                const url = `/api/live/stats${householdParam ? '?household_id=' + householdParam : ''}`;
+                const response = await fetch(url);
+                if (response.ok) {
+                    this.liveStats = await response.json();
+                }
+            } catch (error) {
+                console.error('Failed to load live stats:', error);
+            }
+        },
+
+        toggleAutoRefresh() {
+            if (this.autoRefresh) {
+                this.startAutoRefresh();
+                this.showToast('Auto-refresh enabled', 'success');
+            } else {
+                this.stopAutoRefresh();
+                this.showToast('Auto-refresh disabled', 'info');
+            }
+        },
+
+        startAutoRefresh() {
+            this.stopAutoRefresh(); // Clear any existing interval
+            this.refreshInterval = setInterval(() => {
+                this.loadLiveStats();
+                htmx.trigger(document.body, 'liveRefresh');
+            }, 30000); // Refresh every 30 seconds
+        },
+
+        stopAutoRefresh() {
+            if (this.refreshInterval) {
+                clearInterval(this.refreshInterval);
+                this.refreshInterval = null;
+            }
+        },
+
+        async manualRefresh() {
+            this.isRefreshing = true;
+            try {
+                await this.loadLiveStats();
+                htmx.trigger(document.body, 'applyFilters');
+                this.updateLastRefreshTime();
+                this.showToast('Expenses refreshed successfully', 'success');
+            } catch (error) {
+                console.error('Manual refresh failed:', error);
+                this.showToast('Failed to refresh expenses', 'error');
+            } finally {
+                this.isRefreshing = false;
+            }
+        },
+
+        setupLiveEventListeners() {
+            // Listen for live expense events
+            document.addEventListener('expenseCreated', (event) => {
+                this.loadLiveStats();
+                htmx.trigger(document.body, 'applyFilters');
+                this.showToast('New expense added', 'success');
+            });
+
+            document.addEventListener('expenseUpdated', (event) => {
+                this.loadLiveStats();
+                htmx.trigger(document.body, 'applyFilters');
+                this.showToast('Expense updated', 'info');
+            });
+
+            document.addEventListener('expenseDeleted', (event) => {
+                this.loadLiveStats();
+                htmx.trigger(document.body, 'applyFilters');
+                this.showToast('Expense deleted', 'success');
+            });
+
+            // Listen for HTMX events
+            document.addEventListener('htmx:afterRequest', (event) => {
+                if (event.detail.target.id === 'expenses-container') {
+                    this.updateLastRefreshTime();
+                    // Extract total count from response headers
+                    const totalHeader = event.detail.xhr.getResponseHeader('X-Total-Count');
+                    if (totalHeader) {
+                        this.totalExpenses = parseInt(totalHeader);
+                    }
+                }
+            });
+        },
+
+        updateLastRefreshTime() {
+            this.lastRefresh = new Date().toLocaleTimeString();
         },
         
         applyFilters() {
@@ -417,82 +548,56 @@ function expensesList() {
             
             // Apply cleared filters
             this.applyFilters();
+            this.showToast('Filters cleared', 'info');
         },
-        
-        toggleViewMode() {
-            this.viewMode = this.viewMode === 'cards' ? 'table' : 'cards';
-            // Re-render with new view mode
-            this.applyFilters();
+
+        formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD'
+            }).format(amount);
+        },
+
+        showToast(message, type = 'info') {
+            // Use our live notification service
+            fetch('/api/live/toast', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message, type })
+            }).catch(error => {
+                console.error('Failed to show toast:', error);
+                // Fallback to simple notification
+                this.showSimpleToast(message, type);
+            });
+        },
+
+        showSimpleToast(message, type) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `p-4 rounded-md shadow-lg transition-all duration-300 ${
+                type === 'success' ? 'bg-green-500 text-white' :
+                type === 'error' ? 'bg-red-500 text-white' :
+                type === 'warning' ? 'bg-yellow-500 text-white' :
+                'bg-blue-500 text-white'
+            }`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => toast.classList.add('transform', 'translate-x-0'), 10);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.classList.add('transform', 'translate-x-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        },
+
+        // Cleanup on destroy
+        destroy() {
+            this.stopAutoRefresh();
         }
     }
-}
-
-// Handle expense actions
-document.addEventListener('expenseUpdated', function(event) {
-    // Refresh the expenses list
-    htmx.trigger(document.body, 'applyFilters');
-    showNotification('Expense updated successfully!', 'success');
-});
-
-document.addEventListener('expenseDeleted', function(event) {
-    // Refresh the expenses list
-    htmx.trigger(document.body, 'applyFilters');
-    showNotification('Expense deleted successfully!', 'success');
-});
-
-document.addEventListener('paymentMarked', function(event) {
-    // Refresh the expenses list
-    htmx.trigger(document.body, 'applyFilters');
-    showNotification('Payment status updated!', 'success');
-});
-
-// Handle HTMX response to update total count
-document.addEventListener('htmx:afterRequest', function(event) {
-    if (event.detail.target.id === 'expenses-container') {
-        // Extract total count from response headers or data
-        const totalHeader = event.detail.xhr.getResponseHeader('X-Total-Count');
-        if (totalHeader) {
-            Alpine.store('expensesList').totalExpenses = parseInt(totalHeader);
-        }
-    }
-});
-
-// Missing expense action functions
-function viewExpenseDetails(expenseId) {
-    // TODO: Implement expense details modal or redirect
-    console.log('Viewing expense details for:', expenseId);
-    // For now, redirect to expense detail page (if it exists)
-    // window.location.href = `/expenses/${expenseId}`;
-    
-    // Or show a simple alert until the detail modal is implemented
-    alert(`Expense details for ID: ${expenseId}\n\nThis feature will be implemented soon!`);
-}
-
-function editExpense(expenseId) {
-    // TODO: Implement expense edit modal or redirect
-    console.log('Editing expense:', expenseId);
-    // For now, redirect to expense edit page (if it exists)
-    // window.location.href = `/expenses/${expenseId}/edit`;
-    
-    // Or show a simple alert until the edit modal is implemented
-    alert(`Edit expense ID: ${expenseId}\n\nThis feature will be implemented soon!`);
-}
-
-// Utility function to show notifications (if not already defined)
-function showNotification(message, type = 'info') {
-    // Simple notification implementation
-    const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 px-4 py-2 rounded-md shadow-lg z-50 ${
-        type === 'success' ? 'bg-green-500 text-white' :
-        type === 'error' ? 'bg-red-500 text-white' :
-        'bg-blue-500 text-white'
-    }`;
-    notification.textContent = message;
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.remove();
-    }, 3000);
 }
 </script>
 {% endblock %} 
