@@ -1,0 +1,164 @@
+<!-- Payment Details Modal -->
+<div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" id="payment-details-modal">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h3 class="text-lg font-medium text-gray-900">Payment Details</h3>
+                <p class="text-sm text-gray-500">Payment ID: {{ payment.id }}</p>
+            </div>
+            <button 
+                onclick="closeModal()"
+                class="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+            >
+                ×
+            </button>
+        </div>
+        
+        <!-- Payment Information -->
+        <div class="space-y-6">
+            <!-- Amount and Type -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                    <div class="text-3xl font-bold text-green-600">
+                        ${{ "%.2f"|format(payment.amount) }}
+                        <span class="text-sm text-gray-500">{{ payment.currency }}</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Payment Type</label>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {{ payment.payment_type|title }}
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Payer and Payee -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">From (Payer)</label>
+                    {% if payment.payer %}
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                            <span class="text-blue-600 font-medium">{{ payment.payer.first_name[0] }}{{ payment.payer.last_name[0] }}</span>
+                        </div>
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">{{ payment.payer.full_name }}</div>
+                            <div class="text-sm text-gray-500">@{{ payment.payer.username }}</div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-gray-500">Unknown</div>
+                    {% endif %}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">To (Payee)</label>
+                    {% if payment.payee %}
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                            <span class="text-green-600 font-medium">{{ payment.payee.first_name[0] }}{{ payment.payee.last_name[0] }}</span>
+                        </div>
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">{{ payment.payee.full_name }}</div>
+                            <div class="text-sm text-gray-500">@{{ payment.payee.username }}</div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-gray-500">Unknown</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Payment Method and Date -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                    <div class="text-gray-900">{{ payment.payment_method|title if payment.payment_method else 'Not specified' }}</div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Payment Date</label>
+                    <div class="text-gray-900">{{ payment.payment_date_display if payment.payment_date_display else 'Not specified' }}</div>
+                </div>
+            </div>
+            
+            <!-- Description -->
+            {% if payment.description %}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <div class="text-gray-900 bg-gray-50 p-3 rounded-md">{{ payment.description }}</div>
+            </div>
+            {% endif %}
+            
+            <!-- Reference Number -->
+            {% if payment.reference_number %}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Reference Number</label>
+                <div class="text-gray-900 font-mono bg-gray-50 p-2 rounded">{{ payment.reference_number }}</div>
+            </div>
+            {% endif %}
+            
+            <!-- Household -->
+            {% if payment.household %}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Household</label>
+                <div class="text-gray-900">{{ payment.household.name }}</div>
+            </div>
+            {% endif %}
+            
+            <!-- Metadata -->
+            <div class="border-t pt-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-500">
+                    <div>
+                        <span class="font-medium">Created:</span> {{ payment.created_at }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal Actions -->
+        <div class="flex justify-end space-x-3 mt-6 pt-6 border-t">
+            <button 
+                onclick="closeModal()"
+                class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+                Close
+            </button>
+            <button 
+                onclick="editPaymentFromModal('{{ payment.id }}')"
+                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+                Edit Payment
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function closeModal() {
+    const modal = document.getElementById('payment-details-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function editPaymentFromModal(paymentId) {
+    // Close current modal first
+    closeModal();
+    
+    // Clear modal container to ensure clean state
+    const modalContainer = document.getElementById('modal-container');
+    if (modalContainer) {
+        modalContainer.innerHTML = '';
+    }
+    
+    // Small delay to ensure modal is removed before loading new one
+    setTimeout(() => {
+        // Directly load edit modal using HTMX
+        htmx.ajax('GET', `/partials/payments/${paymentId}/edit`, {
+            target: '#modal-container',
+            swap: 'innerHTML'
+        });
+    }, 50);
+}
+</script> 

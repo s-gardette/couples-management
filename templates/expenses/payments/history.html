@@ -1,0 +1,529 @@
+{% extends "base.html" %}
+
+{% block title %}Payment History{% if household %} - {{ household.name }}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="paymentHistory()">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">
+                Payment History
+                {% if household %}
+                <span class="text-gray-500">- {{ household.name }}</span>
+                {% endif %}
+            </h1>
+            <p class="mt-2 text-sm text-gray-600">Track payments and reimbursements</p>
+        </div>
+        <div class="mt-4 sm:mt-0 flex space-x-3">
+            <div class="flex rounded-md shadow-sm">
+                <button 
+                    @click="viewMode = 'cards'; applyFilters()"
+                    :class="viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                    class="relative inline-flex items-center px-4 py-2 rounded-l-md border border-gray-300 text-sm font-medium focus:z-10 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14-7H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2z"></path>
+                    </svg>
+                    <span class="ml-2">Cards</span>
+                </button>
+                <button 
+                    @click="viewMode = 'table'; applyFilters()"
+                    :class="viewMode === 'table' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                    class="relative inline-flex items-center px-4 py-2 rounded-r-md border border-gray-300 border-l-0 text-sm font-medium focus:z-10 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 6h18m-9 8h9"></path>
+                    </svg>
+                    <span class="ml-2">Table</span>
+                </button>
+            </div>
+            <a 
+                href="{% if household %}/households/{{ household.id }}/payments/create{% else %}/payments/create{% endif %}"
+                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            >
+                <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                </svg>
+                Make Payment
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="bg-white shadow rounded-lg p-4">
+        <!-- Hidden form fields for HTMX -->
+        <input type="hidden" name="view_mode" x-model="viewMode">
+        <input type="hidden" name="min_amount" x-model="filters.minAmount">
+        <input type="hidden" name="max_amount" x-model="filters.maxAmount">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Search -->
+            <div class="lg:col-span-2">
+                <label for="search" class="sr-only">Search payments</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                    <input 
+                        id="search" 
+                        name="search" 
+                        type="text" 
+                        placeholder="Search payments..."
+                        x-model="filters.search"
+                        @input.debounce.300ms="applyFilters()"
+                        class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    >
+                </div>
+            </div>
+
+            <!-- Payment Type Filter -->
+            <div>
+                <label for="payment_type" class="sr-only">Payment Type</label>
+                <select 
+                    id="payment_type"
+                    name="payment_type" 
+                    x-model="filters.paymentType"
+                    @change="applyFilters()"
+                    class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                >
+                    <option value="">All Types</option>
+                    <option value="direct_expense">Direct Expense Payment</option>
+                    <option value="reimbursement">Reimbursement</option>
+                    <option value="general">General Payment</option>
+                </select>
+            </div>
+
+            <!-- Date Range -->
+            <div>
+                <label for="date_range" class="sr-only">Date Range</label>
+                <select 
+                    id="date_range"
+                    name="date_range" 
+                    x-model="filters.dateRange"
+                    @change="applyFilters()"
+                    class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                >
+                    <option value="">All Time</option>
+                    <option value="today">Today</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                    <option value="quarter">This Quarter</option>
+                    <option value="year">This Year</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Advanced Filters Toggle -->
+        <div class="mt-4">
+            <button 
+                @click="showAdvancedFilters = !showAdvancedFilters"
+                class="text-sm text-indigo-600 hover:text-indigo-500 flex items-center"
+            >
+                <span x-text="showAdvancedFilters ? 'Hide' : 'Show'"></span>
+                <span class="ml-1">Advanced Filters</span>
+                <svg class="ml-1 h-4 w-4 transform transition-transform" :class="showAdvancedFilters ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Advanced Filters -->
+        <div x-show="showAdvancedFilters" x-transition class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Amount Range -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Amount Range</label>
+                <div class="flex space-x-2">
+                    <input 
+                        type="number" 
+                        placeholder="Min"
+                        x-model="filters.minAmount"
+                        @input.debounce.500ms="applyFilters()"
+                        class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                    >
+                    <input 
+                        type="number" 
+                        placeholder="Max"
+                        x-model="filters.maxAmount"
+                        @input.debounce.500ms="applyFilters()"
+                        class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                    >
+                </div>
+            </div>
+
+            <!-- Payment Status -->
+            <div>
+                <label for="payment_status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select 
+                    id="payment_status"
+                    x-model="filters.paymentStatus"
+                    @change="applyFilters()"
+                    class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                >
+                    <option value="">All</option>
+                    <option value="completed">Completed</option>
+                    <option value="pending">Pending</option>
+                    <option value="failed">Failed</option>
+                </select>
+            </div>
+
+            <!-- Payer/Payee -->
+            <div>
+                <label for="payer_payee" class="block text-sm font-medium text-gray-700 mb-1">Payer/Payee</label>
+                <select 
+                    id="payer_payee"
+                    x-model="filters.payerPayee"
+                    @change="applyFilters()"
+                    class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                >
+                    <option value="">All</option>
+                    <option value="me_paid">I Paid</option>
+                    <option value="me_received">I Received</option>
+                    <!-- Dynamic options will be loaded -->
+                </select>
+            </div>
+
+            <!-- Sort By -->
+            <div>
+                <label for="sort_by" class="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+                <select 
+                    id="sort_by"
+                    x-model="filters.sortBy"
+                    @change="applyFilters()"
+                    class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                >
+                    <option value="date_desc">Date (Newest First)</option>
+                    <option value="date_asc">Date (Oldest First)</option>
+                    <option value="amount_desc">Amount (Highest First)</option>
+                    <option value="amount_asc">Amount (Lowest First)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Clear Filters -->
+        <div class="mt-4 flex justify-between items-center">
+            <button 
+                @click="clearFilters()"
+                class="text-sm text-gray-600 hover:text-gray-500"
+            >
+                Clear All Filters
+            </button>
+            <div class="text-sm text-gray-500">
+                <span x-text="totalPayments"></span> payments found
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dl>
+                        <dt class="text-sm font-medium text-gray-500 truncate">Total Paid</dt>
+                        <dd class="text-lg font-medium text-gray-900">${{ "%.2f"|format(summary.total_paid or 0) }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dl>
+                        <dt class="text-sm font-medium text-gray-500 truncate">Total Received</dt>
+                        <dd class="text-lg font-medium text-gray-900">${{ "%.2f"|format(summary.total_received or 0) }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                        <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dl>
+                        <dt class="text-sm font-medium text-gray-500 truncate">Net Balance</dt>
+                        {% set net_balance = (summary.total_received or 0) - (summary.total_paid or 0) %}
+                        <dd class="text-lg font-medium {% if net_balance >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                            ${{ "%.2f"|format(net_balance) }}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payments List -->
+    <div 
+        id="payments-container"
+        hx-get="{% if household %}/partials/payments/history?household_id={{ household.id }}&view_type=list{% else %}/partials/payments/history?view_type=list{% endif %}"
+        hx-trigger="applyFilters from:body"
+        hx-target="#payments-container"
+        hx-swap="innerHTML"
+        hx-include="[name='search'], [name='payment_type'], [name='date_range'], [name='payment_status'], [name='payer_payee'], [name='sort_by'], [name='min_amount'], [name='max_amount'], [name='view_mode']"
+    >
+        <!-- Loading state -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for i in range(6) %}
+            <div class="bg-white shadow rounded-lg p-6 animate-pulse">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                    <div class="h-6 bg-gray-200 rounded w-16"></div>
+                </div>
+                <div class="space-y-3">
+                    <div class="h-8 bg-gray-200 rounded w-1/2"></div>
+                    <div class="h-3 bg-gray-200 rounded w-2/3"></div>
+                    <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div id="pagination-container" class="flex items-center justify-between">
+        <!-- Pagination will be loaded with payments -->
+    </div>
+    
+    <!-- Modal Container -->
+    <div id="modal-container">
+        <!-- Modals will be loaded here -->
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function paymentHistory() {
+    return {
+        viewMode: 'cards',
+        showAdvancedFilters: false,
+        totalPayments: 0,
+        filters: {
+            search: '',
+            paymentType: '',
+            dateRange: '',
+            minAmount: '',
+            maxAmount: '',
+            paymentStatus: '',
+            payerPayee: '',
+            sortBy: 'date_desc'
+        },
+        
+        init() {
+            // Load initial data automatically
+            setTimeout(() => {
+                this.applyFilters();
+            }, 100);
+        },
+        
+        applyFilters() {
+            // Update hidden form fields
+            this.updateFormFields();
+            
+            // Trigger HTMX request
+            htmx.trigger(document.body, 'applyFilters');
+        },
+        
+        updateFormFields() {
+            // Update form fields with current filter values
+            Object.keys(this.filters).forEach(key => {
+                const field = document.querySelector(`[name="${key}"]`);
+                if (field) {
+                    field.value = this.filters[key];
+                }
+            });
+            
+            // Also update view_mode field
+            const viewModeField = document.querySelector(`[name="view_mode"]`);
+            if (viewModeField) {
+                viewModeField.value = this.viewMode;
+            }
+        },
+        
+        clearFilters() {
+            this.filters = {
+                search: '',
+                paymentType: '',
+                dateRange: '',
+                minAmount: '',
+                maxAmount: '',
+                payerPayee: '',
+                sortBy: 'date_desc'
+            };
+            this.applyFilters();
+        }
+    }
+}
+
+// Payment interaction functions
+function viewPaymentDetails(paymentId) {
+    // Open payment details modal
+    htmx.ajax('GET', `/partials/payments/${paymentId}/details`, {
+        target: '#modal-container',
+        swap: 'innerHTML'
+    });
+}
+
+function editPayment(paymentId) {
+    // Open payment edit modal
+    htmx.ajax('GET', `/partials/payments/${paymentId}/edit`, {
+        target: '#modal-container',
+        swap: 'innerHTML'
+    });
+}
+
+function deletePayment(paymentId) {
+    // Enhanced confirmation dialog with expense share warning
+    const confirmMessage = 'Are you sure you want to delete this payment?\n\n' +
+                          '⚠️  WARNING: This action will:\n' +
+                          '• Permanently remove the payment from your records\n' +
+                          '• Revert any linked expenses back to UNPAID status\n' +
+                          '• This action cannot be undone\n\n' +
+                          'Do you want to continue?';
+    
+    if (confirm(confirmMessage)) {
+        // Show loading state
+        const buttons = document.querySelectorAll(`[onclick*="deletePayment('${paymentId}')"]`);
+        buttons.forEach(button => {
+            button.disabled = true;
+            button.textContent = 'Deleting...';
+            button.classList.add('opacity-50');
+        });
+        
+        fetch(`/api/payments/${paymentId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': 'Bearer ' + AuthUtils.getAccessToken(),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+        })
+        .then(data => {
+            // Show success message
+            showToast('Payment deleted successfully!', 'success');
+            
+            // Refresh the payments list
+            refreshPayments();
+        })
+        .catch(error => {
+            console.error('Error deleting payment:', error);
+            showToast(`Failed to delete payment: ${error.message}`, 'error');
+            
+            // Restore button state
+            buttons.forEach(button => {
+                button.disabled = false;
+                button.textContent = 'Delete';
+                button.classList.remove('opacity-50');
+            });
+        });
+    }
+}
+
+// Toast notification function
+function showToast(message, type = 'info') {
+    // Remove existing toasts
+    const existingToasts = document.querySelectorAll('.toast-notification');
+    existingToasts.forEach(toast => toast.remove());
+    
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast-notification fixed top-4 right-4 z-50 max-w-sm w-full shadow-lg rounded-lg pointer-events-auto transition-all duration-300 transform translate-x-full`;
+    
+    const bgColors = {
+        success: 'bg-green-500',
+        error: 'bg-red-500',
+        warning: 'bg-yellow-500',
+        info: 'bg-blue-500'
+    };
+    
+    const icons = {
+        success: 'M5 13l4 4L19 7',
+        error: 'M6 18L18 6M6 6l12 12',
+        warning: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.996-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z',
+        info: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
+    };
+    
+    toast.innerHTML = `
+        <div class="${bgColors[type] || bgColors.info} p-4 rounded-lg shadow-lg">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${icons[type] || icons.info}"></path>
+                    </svg>
+                </div>
+                <div class="ml-3 flex-1">
+                    <p class="text-sm font-medium text-white">${message}</p>
+                </div>
+                <div class="ml-4 flex-shrink-0">
+                    <button onclick="this.parentElement.parentElement.parentElement.remove()" class="text-white hover:text-gray-200 focus:outline-none">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Animate in
+    setTimeout(() => {
+        toast.classList.remove('translate-x-full');
+    }, 100);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.classList.add('translate-x-full');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 300);
+        }
+    }, 5000);
+}
+
+// Function to refresh payments list
+function refreshPayments() {
+    htmx.trigger(document.body, 'applyFilters');
+}
+
+// Make refreshPayments available globally for modal callbacks
+window.refreshPayments = refreshPayments;
+
+// Make showToast available globally for consistent notifications
+window.showToast = showToast;
+</script>
+{% endblock %} 

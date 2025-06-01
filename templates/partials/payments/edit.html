@@ -1,0 +1,186 @@
+<!-- Payment Edit Modal -->
+<div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" id="payment-edit-modal">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h3 class="text-lg font-medium text-gray-900">Edit Payment</h3>
+                <p class="text-sm text-gray-500">Payment ID: {{ payment.id }}</p>
+            </div>
+            <button 
+                onclick="closeEditModal()"
+                class="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+            >
+                ×
+            </button>
+        </div>
+        
+        <!-- Edit Form -->
+        <form id="payment-edit-form" class="space-y-6">
+            <!-- Amount -->
+            <div>
+                <label for="edit-amount" class="block text-sm font-medium text-gray-700 mb-2">Payment Amount</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span class="text-gray-500 sm:text-sm">$</span>
+                    </div>
+                    <input 
+                        type="number" 
+                        id="edit-amount"
+                        name="amount"
+                        value="{{ payment.amount }}"
+                        step="0.01" 
+                        min="0.01"
+                        required
+                        class="block w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    >
+                </div>
+            </div>
+            
+            <!-- Payment Method -->
+            <div>
+                <label for="edit-payment-method" class="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+                <select 
+                    id="edit-payment-method"
+                    name="payment_method"
+                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                    <option value="">Select payment method...</option>
+                    <option value="cash" {% if payment.payment_method == 'cash' %}selected{% endif %}>Cash</option>
+                    <option value="venmo" {% if payment.payment_method == 'venmo' %}selected{% endif %}>Venmo</option>
+                    <option value="paypal" {% if payment.payment_method == 'paypal' %}selected{% endif %}>PayPal</option>
+                    <option value="zelle" {% if payment.payment_method == 'zelle' %}selected{% endif %}>Zelle</option>
+                    <option value="bank_transfer" {% if payment.payment_method == 'bank_transfer' %}selected{% endif %}>Bank Transfer</option>
+                    <option value="check" {% if payment.payment_method == 'check' %}selected{% endif %}>Check</option>
+                    <option value="credit_card" {% if payment.payment_method == 'credit_card' %}selected{% endif %}>Credit Card</option>
+                    <option value="other" {% if payment.payment_method == 'other' %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+            
+            <!-- Description -->
+            <div>
+                <label for="edit-description" class="block text-sm font-medium text-gray-700 mb-2">Description (Optional)</label>
+                <textarea 
+                    id="edit-description"
+                    name="description"
+                    rows="3"
+                    placeholder="Add any notes about this payment..."
+                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                >{{ payment.description }}</textarea>
+            </div>
+            
+            <!-- Reference Number -->
+            <div>
+                <label for="edit-reference-number" class="block text-sm font-medium text-gray-700 mb-2">Reference Number (Optional)</label>
+                <input 
+                    type="text" 
+                    id="edit-reference-number"
+                    name="reference_number"
+                    value="{{ payment.reference_number }}"
+                    placeholder="Check number, transaction ID, etc."
+                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                >
+            </div>
+            
+            <!-- Payment Date -->
+            <div>
+                <label for="edit-payment-date" class="block text-sm font-medium text-gray-700 mb-2">Payment Date</label>
+                <input 
+                    type="date" 
+                    id="edit-payment-date"
+                    name="payment_date"
+                    value="{{ payment.payment_date }}"
+                    required
+                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                >
+            </div>
+        </form>
+        
+        <!-- Modal Actions -->
+        <div class="flex justify-end space-x-3 mt-6 pt-6 border-t">
+            <button 
+                onclick="closeEditModal()"
+                class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+                Cancel
+            </button>
+            <button 
+                onclick="savePayment()"
+                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            >
+                Save Changes
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function closeEditModal() {
+    const modal = document.getElementById('payment-edit-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function savePayment() {
+    const form = document.getElementById('payment-edit-form');
+    if (!form) {
+        alert('Form not found');
+        return;
+    }
+    
+    const formData = new FormData(form);
+    
+    // Convert FormData to JSON
+    const data = {};
+    for (let [key, value] of formData.entries()) {
+        if (key === 'amount') {
+            data[key] = parseFloat(value);
+        } else {
+            data[key] = value;
+        }
+    }
+    
+    // Send PUT request to update payment
+    fetch(`/api/payments/{{ payment.id }}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + AuthUtils.getAccessToken()
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+    })
+    .then(data => {
+        // Use toast instead of alert
+        if (typeof showToast === 'function') {
+            showToast('Payment updated successfully!', 'success');
+        } else {
+            alert('Payment updated successfully!');
+        }
+        closeEditModal();
+        // Refresh the payments list
+        if (typeof window.refreshPayments === 'function') {
+            window.refreshPayments();
+        } else {
+            // Fallback: reload the page
+            window.location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error updating payment:', error);
+        // Use toast instead of alert
+        if (typeof showToast === 'function') {
+            showToast(`Failed to update payment: ${error.message}`, 'error');
+        } else {
+            alert(`Failed to update payment: ${error.message}`);
+        }
+    });
+}
+</script> 

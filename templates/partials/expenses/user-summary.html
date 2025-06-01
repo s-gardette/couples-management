@@ -1,0 +1,75 @@
+{% if user_expenses %}
+<div class="space-y-4">
+    <!-- Summary Header -->
+    <div class="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <div>
+            <h4 class="text-sm font-medium text-blue-900">
+                Expenses for {{ user_name }}
+            </h4>
+            <p class="text-xs text-blue-700">{{ user_expenses|length }} unpaid expense(s)</p>
+        </div>
+        <div class="text-right">
+            <div class="text-lg font-bold text-blue-900">
+                ${{ "%.2f"|format(total_amount) }}
+            </div>
+            <div class="text-xs text-blue-700">Total to pay</div>
+        </div>
+    </div>
+
+    <!-- Expense List -->
+    <div class="space-y-2 max-h-48 overflow-y-auto">
+        {% for expense in user_expenses %}
+        <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-md">
+            <div class="flex-1">
+                <div class="flex items-center justify-between">
+                    <h5 class="text-sm font-medium text-gray-900">{{ expense.title }}</h5>
+                    <span class="text-sm font-semibold text-gray-900">${{ "%.2f"|format(expense.user_share) }}</span>
+                </div>
+                <div class="mt-1 flex items-center justify-between text-xs text-gray-500">
+                    <span>{{ expense.date_display }}</span>
+                    <span>{{ expense.category.name if expense.category else 'Other' }}</span>
+                </div>
+                {% if expense.description %}
+                <p class="mt-1 text-xs text-gray-600 truncate">{{ expense.description[:50] }}{% if expense.description|length > 50 %}...{% endif %}</p>
+                {% endif %}
+            </div>
+            <div class="ml-3 flex-shrink-0">
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                    Unpaid
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Payment Summary -->
+    <div class="p-4 bg-gray-50 rounded-lg border-t border-gray-200">
+        <div class="flex items-center justify-between text-sm">
+            <span class="font-medium text-gray-700">Total Payment Amount:</span>
+            <span class="font-bold text-gray-900 text-lg">${{ "%.2f"|format(total_amount) }}</span>
+        </div>
+        <p class="mt-2 text-xs text-gray-600">
+            This will pay all {{ user_expenses|length }} unpaid expense(s) for {{ user_name }} and mark them as settled.
+        </p>
+    </div>
+</div>
+{% else %}
+<div class="p-6 text-center">
+    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"></path>
+    </svg>
+    <h3 class="mt-2 text-sm font-medium text-gray-900">No unpaid expenses</h3>
+    <p class="mt-1 text-sm text-gray-500">
+        {% if user_name %}
+        {{ user_name }} has no unpaid expenses at this time.
+        {% else %}
+        This person has no unpaid expenses at this time.
+        {% endif %}
+    </p>
+    <div class="mt-4">
+        <span class="inline-flex items-center px-3 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800">
+            All caught up! ✓
+        </span>
+    </div>
+</div>
+{% endif %} 

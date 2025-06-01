@@ -85,6 +85,12 @@ class Household(BaseModel, NameMixin, DescriptionMixin, ActiveMixin):
         cascade="all, delete-orphan"
     )
     
+    payments = relationship(
+        "Payment",
+        back_populates="household",
+        cascade="all, delete-orphan"
+    )
+    
     def __repr__(self) -> str:
         return f"<Household(id={self.id}, name='{self.name}', invite_code='{self.invite_code}')>"
     

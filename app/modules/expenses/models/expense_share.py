@@ -86,6 +86,12 @@ class ExpenseShare(BaseModel, ActiveMixin):
         back_populates="expense_shares"
     )
     
+    payments = relationship(
+        "ExpenseSharePayment",
+        back_populates="expense_share",
+        cascade="all, delete-orphan"
+    )
+    
     def __repr__(self) -> str:
         status = "paid" if self.is_paid else "unpaid"
         return f"<ExpenseShare(expense_id={self.expense_id}, user_household_id={self.user_household_id}, amount={self.share_amount}, status={status})>"

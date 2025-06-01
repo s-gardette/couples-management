@@ -801,27 +801,159 @@ class ExpenseService(BaseService[Expense, dict, dict]):
             return False, f"Failed to create expense shares: {str(e)}"
 
     async def _recalculate_expense_shares(self, expense: Expense) -> None:
-        """Recalculate expense shares when amount changes."""
+        """Recalculate and update shares for an expense."""
         try:
-            # Get existing shares
-            shares = (
-                self.db.query(ExpenseShare)
+            # Get all active members of the household
+            household_members = (
+                self.db.query(UserHousehold)
                 .filter(
-                    ExpenseShare.expense_id == expense.id,
-                    ExpenseShare.is_active == True
+                    UserHousehold.household_id == expense.household_id,
+                    UserHousehold.is_active == True
                 )
                 .all()
             )
 
-            if not shares:
+            if not household_members:
+                logger.warning(f"No active members found for household {expense.household_id}")
                 return
 
-            # Recalculate based on existing percentages
-            for share in shares:
-                if share.share_percentage:
-                    new_amount = (expense.amount * share.share_percentage) / 100
-                    share.share_amount = new_amount
+            # Deactivate existing shares
+            existing_shares = (
+                self.db.query(ExpenseShare)
+                .filter(ExpenseShare.expense_id == expense.id)
+                .all()
+            )
+            for share in existing_shares:
+                share.is_active = False
+
+            # Create new equal shares
+            share_amounts = split_amount_equally(expense.amount, len(household_members))
+
+            for i, member in enumerate(household_members):
+                share = ExpenseShare(
+                    expense_id=expense.id,
+                    user_household_id=member.id,
+                    share_amount=share_amounts[i],
+                    share_percentage=Decimal("100") / len(household_members),
+                    is_paid=False,
+                    is_active=True
+                )
+                self.db.add(share)
 
         except Exception as e:
             logger.error(f"Error recalculating expense shares: {e}")
-            raise 
+            raise
+
+    async def get_user_unpaid_expenses(
+        self,
+        user_id: UUID,
+        household_id: Optional[UUID] = None
+    ) -> Tuple[bool, str, List[Expense]]:
+        """
+        Get unpaid expenses for a specific user.
+
+        Args:
+            user_id: User ID to filter by
+            household_id: Optional household ID to filter by specific household
+
+        Returns:
+            Tuple of (success, message, expenses_list)
+        """
+        try:
+            # Build base query for expenses with unpaid shares
+            query = (
+                self.db.query(Expense)
+                .options(
+                    joinedload(Expense.category),
+                    joinedload(Expense.creator),
+                    joinedload(Expense.shares).joinedload(ExpenseShare.user_household).joinedload(UserHousehold.user)
+                )
+                .join(ExpenseShare)
+                .join(UserHousehold, ExpenseShare.user_household_id == UserHousehold.id)
+                .filter(
+                    Expense.is_active == True,
+                    ExpenseShare.is_active == True,
+                    ExpenseShare.is_paid == False,
+                    UserHousehold.user_id == user_id
+                )
+            )
+
+            # Filter by specific household if provided
+            if household_id:
+                query = query.filter(Expense.household_id == household_id)
+
+            # Get distinct expenses
+            expenses = query.distinct().order_by(Expense.expense_date.desc()).all()
+
+            return True, "Unpaid expenses retrieved successfully", expenses
+
+        except Exception as e:
+            logger.error(f"Error getting unpaid expenses: {e}")
+            return False, f"Failed to get unpaid expenses: {str(e)}", []
+
+    async def get_user_unpaid_expenses_for_payee(
+        self,
+        payer_id: UUID,
+        payee_id: UUID,
+        household_id: Optional[UUID] = None
+    ) -> Tuple[bool, str, List[Expense]]:
+        """
+        Get unpaid expenses where the payer owes money to the payee.
+
+        Args:
+            payer_id: User ID of the person who owes money
+            payee_id: User ID of the person who is owed money
+            household_id: Optional household ID to filter by
+
+        Returns:
+            Tuple of (success, message, expenses_list)
+        """
+        try:
+            # Get payer's membership in household(s)
+            payer_memberships_query = (
+                self.db.query(UserHousehold)
+                .filter(
+                    UserHousehold.user_id == payer_id,
+                    UserHousehold.is_active == True
+                )
+            )
+            
+            if household_id:
+                payer_memberships_query = payer_memberships_query.filter(
+                    UserHousehold.household_id == household_id
+                )
+            
+            payer_memberships = payer_memberships_query.all()
+
+            if not payer_memberships:
+                return False, "Payer is not a member of the specified household(s)", []
+
+            # Get expenses created by payee where payer has unpaid shares
+            query = (
+                self.db.query(Expense)
+                .options(
+                    joinedload(Expense.category),
+                    joinedload(Expense.creator),
+                    joinedload(Expense.shares).joinedload(ExpenseShare.user_household).joinedload(UserHousehold.user)
+                )
+                .join(ExpenseShare)
+                .filter(
+                    Expense.created_by == payee_id,
+                    Expense.is_active == True,
+                    ExpenseShare.is_active == True,
+                    ExpenseShare.is_paid == False,
+                    ExpenseShare.user_household_id.in_([m.id for m in payer_memberships])
+                )
+            )
+
+            # Filter by household if specified
+            if household_id:
+                query = query.filter(Expense.household_id == household_id)
+
+            expenses = query.distinct().order_by(Expense.expense_date.desc()).all()
+
+            return True, "Payer's unpaid expenses for payee retrieved successfully", expenses
+
+        except Exception as e:
+            logger.error(f"Error getting user expense summary: {e}")
+            return False, f"Failed to get user expense summary: {str(e)}", [] 

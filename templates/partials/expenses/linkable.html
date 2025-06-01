@@ -1,0 +1,98 @@
+{% if linkable_expenses %}
+<div x-data="{selectedExpenseTotal: 0, selectedExpenseCount: 0, updateExpenseSelection(event) { const checkbox = event.target; const amount = parseFloat(checkbox.dataset.amount); if (checkbox.checked) { this.selectedExpenseTotal += amount; this.selectedExpenseCount += 1; } else { this.selectedExpenseTotal -= amount; this.selectedExpenseCount -= 1; } try { const paymentCreateEl = document.querySelector('[x-data*=paymentCreate]'); if (paymentCreateEl && paymentCreateEl.__x) { const checkedBoxes = document.querySelectorAll('input[name=expense_ids]:checked'); paymentCreateEl.__x.$data.form.expense_ids = Array.from(checkedBoxes).map(cb => cb.value); } } catch (e) { console.log('Could not update parent form, this is normal for standalone usage'); } }, getPaymentAmount() { try { const paymentCreateEl = document.querySelector('[x-data*=paymentCreate]'); if (paymentCreateEl && paymentCreateEl.__x) { return parseFloat(paymentCreateEl.__x.$data.form.amount || 0); } } catch (e) {} return 0; }, toggleAllExpenses() { const checkboxes = this.$el.querySelectorAll('input[name=expense_ids]'); const allChecked = Array.from(checkboxes).every(cb => cb.checked); checkboxes.forEach(checkbox => { checkbox.checked = !allChecked; checkbox.dispatchEvent(new Event('change')); }); }}" class="space-y-2">
+    <div class="flex items-center justify-between mb-3">
+        <h4 class="text-sm font-medium text-gray-900">Available Expenses to Link</h4>
+        <button 
+            type="button"
+            @click="toggleAllExpenses()"
+            class="text-xs text-indigo-600 hover:text-indigo-500"
+        >
+            Select All
+        </button>
+    </div>
+    
+    {% for expense in linkable_expenses %}
+    <div class="flex items-center p-3 border border-gray-200 rounded-md hover:bg-gray-50">
+        <input 
+            type="checkbox" 
+            id="expense_{{ expense.id }}"
+            name="expense_ids"
+            value="{{ expense.id }}"
+            data-amount="{{ expense.user_share }}"
+            @change="updateExpenseSelection($event)"
+            class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+        >
+        <label for="expense_{{ expense.id }}" class="ml-3 flex-1 cursor-pointer">
+            <div class="flex items-center justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center justify-between">
+                        <h5 class="text-sm font-medium text-gray-900">{{ expense.title }}</h5>
+                        <span class="text-sm font-semibold text-gray-900">${{ "%.2f"|format(expense.user_share) }}</span>
+                    </div>
+                    <div class="mt-1 flex items-center justify-between text-xs text-gray-500">
+                        <span>{{ expense.date_display }}</span>
+                        <span>{{ expense.category.name if expense.category else 'Other' }}</span>
+                    </div>
+                    <div class="mt-1 flex items-center justify-between">
+                        <span class="text-xs text-gray-600">Pay to {{ expense.creator.first_name }} {{ expense.creator.last_name }}</span>
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            Your share: ${{ "%.2f"|format(expense.user_share) }}
+                        </span>
+                    </div>
+                    {% if expense.description %}
+                    <p class="mt-1 text-xs text-gray-600 truncate">{{ expense.description[:50] }}{% if expense.description|length > 50 %}...{% endif %}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </label>
+    </div>
+    {% endfor %}
+    
+    <!-- Selection Summary -->
+    <div 
+        id="expense-selection-summary"
+        x-show="selectedExpenseTotal > 0"
+        x-transition
+        class="mt-4 p-3 bg-indigo-50 border border-indigo-200 rounded-md"
+    >
+        <div class="flex items-center justify-between text-sm">
+            <span class="font-medium text-indigo-900">Selected expenses total:</span>
+            <span class="font-bold text-indigo-900">$<span x-text="selectedExpenseTotal.toFixed(2)"></span></span>
+        </div>
+        <div class="mt-1 text-xs text-indigo-700">
+            <span x-text="selectedExpenseCount"></span> expense(s) selected
+        </div>
+        <div x-show="getPaymentAmount() > 0 && selectedExpenseTotal > getPaymentAmount()" class="mt-2">
+            <div class="flex items-center text-xs text-red-600">
+                <svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+                Selected expenses ($<span x-text="selectedExpenseTotal.toFixed(2)"></span>) exceed payment amount ($<span x-text="getPaymentAmount().toFixed(2)"></span>)
+            </div>
+        </div>
+        <div x-show="getPaymentAmount() > 0 && selectedExpenseTotal < getPaymentAmount()" class="mt-2">
+            <div class="flex items-center text-xs text-blue-600">
+                <svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Remaining unallocated: $<span x-text="(getPaymentAmount() - selectedExpenseTotal).toFixed(2)"></span>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="p-6 text-center">
+    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+    </svg>
+    <h3 class="mt-2 text-sm font-medium text-gray-900">No expenses to link</h3>
+    <p class="mt-1 text-sm text-gray-500">
+        There are no unpaid expenses available to link to this payment.
+    </p>
+    <div class="mt-4">
+        <span class="inline-flex items-center px-3 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+            Payment will be unallocated
+        </span>
+    </div>
+</div>
+{% endif %} 

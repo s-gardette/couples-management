@@ -13,7 +13,11 @@ from app.modules.expenses.models import (
     UserHouseholdRole,
     Category, 
     Expense, 
-    ExpenseShare
+    ExpenseShare,
+    Payment,
+    PaymentType,
+    PaymentMethod,
+    ExpenseSharePayment
 )
 from app.modules.auth.models import User
 from app.modules.auth.models.user import UserRole
@@ -578,6 +582,308 @@ class TestExpenseShareModel:
         assert share.days_since_paid == 2
 
 
+class TestPaymentModel:
+    """Test cases for Payment model."""
+    
+    def test_payment_creation(self, db_session, test_household, test_user, test_user_2):
+        """Test basic payment creation."""
+        from app.modules.expenses.models.payment import Payment, PaymentType, PaymentMethod
+        
+        payment = Payment(
+            household_id=test_household.id,
+            payer_id=test_user.id,
+            payee_id=test_user_2.id,
+            amount=Decimal("50.00"),
+            currency="USD",
+            payment_type=PaymentType.REIMBURSEMENT,
+            payment_method=PaymentMethod.CASH,
+            description="Test payment",
+            reference_number="REF123",
+            is_active=True
+        )
+        db_session.add(payment)
+        db_session.commit()
+        
+        assert payment.id is not None
+        assert payment.household_id == test_household.id
+        assert payment.payer_id == test_user.id
+        assert payment.payee_id == test_user_2.id
+        assert payment.amount == Decimal("50.00")
+        assert payment.currency == "USD"
+        assert payment.payment_type == PaymentType.REIMBURSEMENT
+        assert payment.payment_method == PaymentMethod.CASH
+        assert payment.description == "Test payment"
+        assert payment.reference_number == "REF123"
+        assert payment.is_active is True
+        assert payment.payment_date is not None
+        assert payment.created_at is not None
+    
+    def test_payment_amount_properties(self, db_session, test_household, test_user, test_user_2):
+        """Test payment amount-related properties."""
+        from app.modules.expenses.models.payment import Payment, PaymentType
+        
+        payment = Payment(
+            household_id=test_household.id,
+            payer_id=test_user.id,
+            payee_id=test_user_2.id,
+            amount=Decimal("100.50"),
+            currency="USD",
+            payment_type=PaymentType.REIMBURSEMENT
+        )
+        db_session.add(payment)
+        db_session.commit()
+        
+        # Test amount decimal property
+        assert payment.amount_decimal == Decimal("100.50")
+        
+        # Test formatted amount
+        assert payment.formatted_amount == "$100.50"
+        
+        # Test with different currency
+        payment.currency = "EUR"
+        assert payment.formatted_amount == "€100.50"
+    
+    def test_payment_user_properties(self, db_session, test_household, test_user, test_user_2):
+        """Test payment user-related properties."""
+        from app.modules.expenses.models.payment import Payment, PaymentType
+        
+        payment = Payment(
+            household_id=test_household.id,
+            payer_id=test_user.id,
+            payee_id=test_user_2.id,
+            amount=Decimal("50.00"),
+            payment_type=PaymentType.REIMBURSEMENT
+        )
+        db_session.add(payment)
+        db_session.commit()
+        
+        # Test payer name
+        assert test_user.username in payment.payer_name
+        
+        # Test payee name
+        assert test_user_2.username in payment.payee_name
+    
+    def test_payment_allocation_properties(self, db_session, test_household, test_user, test_user_2, test_expense_share):
+        """Test payment allocation-related properties."""
+        from app.modules.expenses.models.payment import Payment, PaymentType
+        from app.modules.expenses.models.expense_share_payment import ExpenseSharePayment
+        
+        payment = Payment(
+            household_id=test_household.id,
+            payer_id=test_user.id,
+            payee_id=test_user_2.id,
+            amount=Decimal("100.00"),
+            payment_type=PaymentType.REIMBURSEMENT
+        )
+        db_session.add(payment)
+        db_session.commit()
+        
+        # Initially no allocations
+        assert payment.total_allocated_amount == Decimal("0")
+        assert payment.unallocated_amount == Decimal("100.00")
+        assert payment.is_fully_allocated is False
+        assert len(payment.covered_expense_shares) == 0
+        
+        # Add a mock allocation
+        esp = ExpenseSharePayment(
+            payment_id=payment.id,
+            expense_share_id=test_expense_share.id,
+            amount=Decimal("30.00"),
+            is_active=True
+        )
+        db_session.add(esp)
+        db_session.commit()
+        db_session.refresh(payment)
+        
+        # Test with allocation
+        assert payment.total_allocated_amount == Decimal("30.00")
+        assert payment.unallocated_amount == Decimal("70.00")
+        assert payment.is_fully_allocated is False
+    
+    def test_payment_class_methods(self, test_household, test_user, test_user_2):
+        """Test payment class methods."""
+        from app.modules.expenses.models.payment import Payment, PaymentMethod
+        
+        # Test create_reimbursement
+        payment = Payment.create_reimbursement(
+            household_id=str(test_household.id),
+            payer_id=str(test_user.id),
+            payee_id=str(test_user_2.id),
+            amount=Decimal("75.00"),
+            currency="USD",
+            payment_method=PaymentMethod.BANK_TRANSFER,
+            description="Test reimbursement",
+            reference_number="BANK123"
+        )
+        
+        assert payment.household_id == str(test_household.id)
+        assert payment.payer_id == str(test_user.id)
+        assert payment.payee_id == str(test_user_2.id)
+        assert payment.amount == Decimal("75.00")
+        assert payment.payment_method == PaymentMethod.BANK_TRANSFER
+        assert payment.description == "Test reimbursement"
+        assert payment.reference_number == "BANK123"
+    
+    def test_payment_methods_management(self, db_session, test_household, test_user, test_user_2):
+        """Test payment method management."""
+        from app.modules.expenses.models.payment import Payment, PaymentType, PaymentMethod
+        
+        payment = Payment(
+            household_id=test_household.id,
+            payer_id=test_user.id,
+            payee_id=test_user_2.id,
+            amount=Decimal("50.00"),
+            payment_type=PaymentType.REIMBURSEMENT
+        )
+        db_session.add(payment)
+        db_session.commit()
+        
+        # Set payment method
+        payment.set_payment_method(PaymentMethod.CREDIT_CARD, "CARD123")
+        assert payment.payment_method == PaymentMethod.CREDIT_CARD
+        assert payment.reference_number == "CARD123"
+        
+        # Add description
+        payment.add_description("Updated description")
+        assert payment.description == "Updated description"
+    
+    def test_payment_repr(self, db_session, test_household, test_user, test_user_2):
+        """Test payment string representation."""
+        from app.modules.expenses.models.payment import Payment, PaymentType
+        
+        payment = Payment(
+            household_id=test_household.id,
+            payer_id=test_user.id,
+            payee_id=test_user_2.id,
+            amount=Decimal("50.00"),
+            payment_type=PaymentType.REIMBURSEMENT
+        )
+        db_session.add(payment)
+        db_session.commit()
+        
+        repr_str = repr(payment)
+        assert "50.00" in repr_str
+        assert "USD" in repr_str
+        assert "reimbursement" in repr_str
+
+
+class TestExpenseSharePaymentModel:
+    """Test cases for ExpenseSharePayment model."""
+    
+    def test_expense_share_payment_creation(self, db_session, test_payment, test_expense_share):
+        """Test basic expense share payment creation."""
+        from app.modules.expenses.models.expense_share_payment import ExpenseSharePayment
+        
+        esp = ExpenseSharePayment(
+            payment_id=test_payment.id,
+            expense_share_id=test_expense_share.id,
+            amount=Decimal("25.00"),
+            is_active=True
+        )
+        db_session.add(esp)
+        db_session.commit()
+        
+        assert esp.id is not None
+        assert esp.payment_id == test_payment.id
+        assert esp.expense_share_id == test_expense_share.id
+        assert esp.amount == Decimal("25.00")
+        assert esp.is_active is True
+        assert esp.allocated_at is not None
+        assert esp.created_at is not None
+    
+    def test_expense_share_payment_properties(self, db_session, test_payment, test_expense_share):
+        """Test expense share payment properties."""
+        from app.modules.expenses.models.expense_share_payment import ExpenseSharePayment
+        
+        # Create with partial payment
+        esp = ExpenseSharePayment(
+            payment_id=test_payment.id,
+            expense_share_id=test_expense_share.id,
+            amount=Decimal("15.00"),  # Less than full share amount
+            is_active=True
+        )
+        db_session.add(esp)
+        db_session.commit()
+        
+        # Test amount decimal property
+        assert esp.amount_decimal == Decimal("15.00")
+        
+        # Test formatted amount
+        assert "$15.00" in esp.formatted_amount
+        
+        # Test coverage properties
+        assert esp.covers_full_share is False
+        coverage_pct = esp.coverage_percentage
+        assert coverage_pct is not None
+        assert coverage_pct < Decimal("100")
+        
+        # Test with full payment
+        esp.amount = test_expense_share.share_amount
+        assert esp.covers_full_share is True
+        assert esp.coverage_percentage == Decimal("100")
+    
+    def test_expense_share_payment_amount_updates(self, db_session, test_payment, test_expense_share):
+        """Test amount update functionality."""
+        from app.modules.expenses.models.expense_share_payment import ExpenseSharePayment
+        
+        esp = ExpenseSharePayment(
+            payment_id=test_payment.id,
+            expense_share_id=test_expense_share.id,
+            amount=Decimal("10.00"),
+            is_active=True
+        )
+        db_session.add(esp)
+        db_session.commit()
+        
+        original_allocated_at = esp.allocated_at
+        
+        # Update amount
+        esp.update_amount(Decimal("20.00"))
+        assert esp.amount == Decimal("20.00")
+        assert esp.allocated_at > original_allocated_at
+    
+    def test_expense_share_payment_class_methods(self, test_payment, test_expense_share):
+        """Test class methods."""
+        from app.modules.expenses.models.expense_share_payment import ExpenseSharePayment
+        
+        # Test create_allocation
+        esp = ExpenseSharePayment.create_allocation(
+            payment_id=test_payment.id,
+            expense_share_id=test_expense_share.id,
+            amount=Decimal("30.00")
+        )
+        
+        assert esp.payment_id == test_payment.id
+        assert esp.expense_share_id == test_expense_share.id
+        assert esp.amount == Decimal("30.00")
+        assert esp.is_active is True
+        
+        # Test create_full_allocation
+        esp_full = ExpenseSharePayment.create_full_allocation(
+            payment_id=test_payment.id,
+            expense_share=test_expense_share
+        )
+        
+        assert esp_full.amount == test_expense_share.share_amount_decimal
+    
+    def test_expense_share_payment_repr(self, db_session, test_payment, test_expense_share):
+        """Test string representation."""
+        from app.modules.expenses.models.expense_share_payment import ExpenseSharePayment
+        
+        esp = ExpenseSharePayment(
+            payment_id=test_payment.id,
+            expense_share_id=test_expense_share.id,
+            amount=Decimal("25.00")
+        )
+        db_session.add(esp)
+        db_session.commit()
+        
+        repr_str = repr(esp)
+        assert str(test_payment.id) in repr_str
+        assert str(test_expense_share.id) in repr_str
+        assert "25.00" in repr_str
+
+
 # Fixtures for testing
 @pytest.fixture
 def test_user(db_session):
@@ -657,4 +963,55 @@ def test_expense(db_session, test_household, test_user, test_category):
     )
     db_session.add(expense)
     db_session.commit()
-    return expense 
+    return expense
+
+
+@pytest.fixture
+def test_user_2(db_session):
+    """Create a second test user."""
+    user = User(
+        email="test2@example.com",
+        username="testuser2",
+        hashed_password="hashed_password",
+        role=UserRole.USER,
+        is_active=True,
+        email_verified=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    return user
+
+
+@pytest.fixture
+def test_expense_share(db_session, test_expense, test_user_household):
+    """Create a test expense share."""
+    expense_share = ExpenseShare(
+        expense_id=test_expense.id,
+        user_household_id=test_user_household.id,
+        share_amount=Decimal("25.00"),
+        share_percentage=Decimal("50.00"),
+        is_paid=False,
+        is_active=True
+    )
+    db_session.add(expense_share)
+    db_session.commit()
+    return expense_share
+
+
+@pytest.fixture
+def test_payment(db_session, test_household, test_user, test_user_2):
+    """Create a test payment."""
+    payment = Payment(
+        household_id=test_household.id,
+        payer_id=test_user.id,
+        payee_id=test_user_2.id,
+        amount=Decimal("100.00"),
+        currency="USD",
+        payment_type=PaymentType.REIMBURSEMENT,
+        payment_method=PaymentMethod.CASH,
+        description="Test payment",
+        is_active=True
+    )
+    db_session.add(payment)
+    db_session.commit()
+    return payment 

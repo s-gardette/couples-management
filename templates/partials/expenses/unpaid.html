@@ -1,0 +1,63 @@
+{% if unpaid_expenses %}
+<div class="space-y-1">
+    {% for expense in unpaid_expenses %}
+    <div 
+        class="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+        data-expense-id="{{ expense.id }}"
+        data-expense-title="{{ expense.title }}"
+        data-expense-amount="{{ expense.amount }}"
+        data-expense-user-share="{{ expense.user_share }}"
+        data-expense-description="{{ expense.description or '' }}"
+        data-expense-date="{{ expense.date }}"
+        data-expense-category="{{ expense.category.name if expense.category else 'Other' }}"
+        data-expense-creator-first="{{ expense.creator.first_name }}"
+        data-expense-creator-last="{{ expense.creator.last_name }}"
+        onclick="selectExpenseFromElement(this)"
+    >
+        <div class="flex items-center justify-between">
+            <div class="flex-1">
+                <div class="flex items-center justify-between">
+                    <h4 class="text-sm font-medium text-gray-900">{{ expense.title }}</h4>
+                    <span class="text-sm font-semibold text-gray-900">${{ "%.2f"|format(expense.user_share) }}</span>
+                </div>
+                <div class="mt-1 flex items-center justify-between text-xs text-gray-500">
+                    <span>{{ expense.date_display }}</span>
+                    <span>Total: ${{ "%.2f"|format(expense.amount) }}</span>
+                </div>
+                <div class="mt-1 flex items-center justify-between">
+                    <span class="text-xs text-gray-600">{{ expense.category.name if expense.category else 'Other' }}</span>
+                    <span class="text-xs font-medium text-blue-600">Pay to {{ expense.creator.first_name }} {{ expense.creator.last_name }}</span>
+                </div>
+                {% if expense.description %}
+                <p class="mt-1 text-xs text-gray-500 truncate">{{ expense.description[:60] }}{% if expense.description|length > 60 %}...{% endif %}</p>
+                {% endif %}
+            </div>
+            <div class="ml-3 flex-shrink-0">
+                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="p-6 text-center">
+    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+    </svg>
+    <h3 class="mt-2 text-sm font-medium text-gray-900">No unpaid expenses</h3>
+    <p class="mt-1 text-sm text-gray-500">All expenses have been paid or there are no expenses to pay.</p>
+    <div class="mt-6">
+        <a 
+            href="{% if household %}/households/{{ household.id }}/expenses/create{% else %}/expenses/create{% endif %}"
+            class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+            <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            Add First Expense
+        </a>
+    </div>
+</div>
+{% endif %} 
