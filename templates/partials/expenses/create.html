@@ -1,5 +1,5 @@
 <!-- Expense Creation Form Partial -->
-<div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+<div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4" x-data="expenseCreateForm('{{ household_id }}')">
     <div class="sm:flex sm:items-start">
         <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10">
             <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -12,22 +12,24 @@
             </h3>
             <div class="mt-2">
                 <p class="text-sm text-gray-500">
-                    Track a new shared expense for your household.
+                    Record a new expense for this household. The amount will be split according to your household's expense sharing preferences.
                 </p>
             </div>
             
             <form 
                 class="mt-6 space-y-6"
-                hx-post="/api/households/{{ household_id }}/expenses"
+                hx-post="/api/expenses"
                 hx-headers='{"Content-Type": "application/json"}'
                 hx-ext="json-enc"
                 hx-indicator="#expense-loading"
                 @submit="createExpense"
-                x-data="expenseCreateForm('{{ household_id }}')"
             >
+                <!-- Hidden household ID field -->
+                <input type="hidden" name="household_id" :value="householdId">
+                
                 <div>
                     <label for="title" class="block text-sm font-medium text-gray-700">
-                        Title *
+                        Expense Title *
                     </label>
                     <div class="mt-1">
                         <input 
@@ -42,43 +44,41 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div>
-                        <label for="amount" class="block text-sm font-medium text-gray-700">
-                            Amount *
-                        </label>
-                        <div class="mt-1 relative rounded-md shadow-sm">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <span class="text-gray-500 sm:text-sm">$</span>
-                            </div>
-                            <input 
-                                id="amount" 
-                                name="amount" 
-                                type="number" 
-                                step="0.01"
-                                min="0"
-                                required 
-                                x-model="form.amount"
-                                class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
-                                placeholder="0.00"
-                            >
+                <div>
+                    <label for="amount" class="block text-sm font-medium text-gray-700">
+                        Amount *
+                    </label>
+                    <div class="mt-1 relative rounded-md shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500 sm:text-sm">$</span>
                         </div>
+                        <input 
+                            id="amount" 
+                            name="amount" 
+                            type="number" 
+                            step="0.01" 
+                            min="0"
+                            required 
+                            x-model="form.amount"
+                            class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
+                            placeholder="0.00"
+                        >
                     </div>
+                </div>
 
-                    <div>
-                        <label for="date" class="block text-sm font-medium text-gray-700">
-                            Date *
-                        </label>
-                        <div class="mt-1">
-                            <input 
-                                id="date" 
-                                name="date" 
-                                type="date" 
-                                required 
-                                x-model="form.date"
-                                class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                            >
-                        </div>
+                <div>
+                    <label for="date" class="block text-sm font-medium text-gray-700">
+                        Date *
+                    </label>
+                    <div class="mt-1">
+                        <input 
+                            id="date" 
+                            name="date" 
+                            type="date" 
+                            required 
+                            x-model="form.date"
+                            class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                        >
                     </div>
                 </div>
 
@@ -93,14 +93,16 @@
                             x-model="form.category"
                             class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
                         >
-                            <option value="">Select a category</option>
-                            <option value="food">Food & Dining</option>
-                            <option value="transportation">Transportation</option>
-                            <option value="utilities">Utilities</option>
-                            <option value="entertainment">Entertainment</option>
-                            <option value="shopping">Shopping</option>
-                            <option value="healthcare">Healthcare</option>
-                            <option value="other">Other</option>
+                            <option value="">Select a category...</option>
+                            <option value="Food & Dining">Food & Dining</option>
+                            <option value="Utilities">Utilities</option>
+                            <option value="Transportation">Transportation</option>
+                            <option value="Entertainment">Entertainment</option>
+                            <option value="Shopping">Shopping</option>
+                            <option value="Health & Fitness">Health & Fitness</option>
+                            <option value="Bills & Services">Bills & Services</option>
+                            <option value="Travel">Travel</option>
+                            <option value="Other">Other</option>
                         </select>
                     </div>
                 </div>
@@ -132,7 +134,7 @@
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
-                            Creating...
+                            Adding...
                         </span>
                         <span class="htmx-indicator-none">
                             Add Expense
@@ -149,44 +151,4 @@
             </form>
         </div>
     </div>
-</div>
-
-<script>
-function expenseCreateForm(householdId) {
-    // Get today's date in YYYY-MM-DD format
-    const today = new Date().toISOString().split('T')[0];
-    
-    return {
-        householdId: householdId,
-        form: {
-            title: '',
-            amount: '',
-            date: today,
-            category: '',
-            description: ''
-        },
-        
-        createExpense() {
-            // Form will be submitted via HTMX
-        },
-        
-        closeModal() {
-            // Trigger close event
-            this.$dispatch('close-modal');
-        }
-    }
-}
-
-// Handle successful creation
-document.addEventListener('htmx:afterRequest', function(event) {
-    if (event.detail.xhr.status === 201 && event.detail.target.tagName === 'FORM') {
-        // Close modal and refresh expenses list
-        document.dispatchEvent(new CustomEvent('expenseCreated'));
-        // Reset form
-        const today = new Date().toISOString().split('T')[0];
-        Alpine.store('expenseCreateForm', {
-            form: { title: '', amount: '', date: today, category: '', description: '' }
-        });
-    }
-});
-</script> 
+</div> 

@@ -144,6 +144,46 @@
 
 {% block scripts %}
 <script>
+// Alpine.js functions for household modals
+function householdCreateForm() {
+    return {
+        form: {
+            name: '',
+            description: '',
+            currency: 'USD'
+        },
+        
+        createHousehold() {
+            // Form will be submitted via HTMX
+        },
+        
+        closeModal() {
+            // Use a more reliable approach to close modal
+            // Dispatch event that the parent page can listen to
+            window.dispatchEvent(new CustomEvent('closeCreateModal'));
+        }
+    }
+}
+
+function householdJoinForm() {
+    return {
+        form: {
+            inviteCode: '',
+            nickname: ''
+        },
+        
+        joinHousehold() {
+            // Form will be submitted via HTMX
+        },
+        
+        closeModal() {
+            // Use a more reliable approach to close modal
+            // Dispatch event that the parent page can listen to
+            window.dispatchEvent(new CustomEvent('closeJoinModal'));
+        }
+    }
+}
+
 function householdsList() {
     return {
         showCreateModal: false,
@@ -174,10 +214,13 @@ document.addEventListener('householdCreated', function(event) {
     htmx.trigger(document.body, 'filterHouseholds');
     
     // Close modals
-    Alpine.store('modals', {
-        showCreateModal: false,
-        showJoinModal: false
-    });
+    const mainComponent = document.querySelector('[x-data*="householdsList"]');
+    if (mainComponent && mainComponent._x_dataStack) {
+        const data = mainComponent._x_dataStack[0];
+        if (data) {
+            data.showCreateModal = false;
+        }
+    }
     
     // Show success message
     showNotification('Household created successfully!', 'success');
@@ -188,13 +231,58 @@ document.addEventListener('householdJoined', function(event) {
     htmx.trigger(document.body, 'filterHouseholds');
     
     // Close modals
-    Alpine.store('modals', {
-        showCreateModal: false,
-        showJoinModal: false
-    });
+    const mainComponent = document.querySelector('[x-data*="householdsList"]');
+    if (mainComponent && mainComponent._x_dataStack) {
+        const data = mainComponent._x_dataStack[0];
+        if (data) {
+            data.showJoinModal = false;
+        }
+    }
     
     // Show success message
     showNotification('Successfully joined household!', 'success');
+});
+
+// Handle modal close events from partials
+window.addEventListener('closeJoinModal', function(event) {
+    // Find the Alpine component and close the join modal
+    const mainComponent = document.querySelector('[x-data*="householdsList"]');
+    if (mainComponent && mainComponent._x_dataStack) {
+        const data = mainComponent._x_dataStack[0];
+        if (data) {
+            data.showJoinModal = false;
+        }
+    }
+});
+
+window.addEventListener('closeCreateModal', function(event) {
+    // Find the Alpine component and close the create modal
+    const mainComponent = document.querySelector('[x-data*="householdsList"]');
+    if (mainComponent && mainComponent._x_dataStack) {
+        const data = mainComponent._x_dataStack[0];
+        if (data) {
+            data.showCreateModal = false;
+        }
+    }
+});
+
+// Handle successful form submissions via HTMX
+document.addEventListener('htmx:afterRequest', function(event) {
+    if (event.detail.xhr.status === 201 && event.detail.target.tagName === 'FORM') {
+        const form = event.detail.target;
+        if (form.closest('[hx-get*="/partials/households/create"]') || form.action.includes('/api/households')) {
+            // Household creation successful
+            document.dispatchEvent(new CustomEvent('householdCreated'));
+        }
+    }
+    
+    if (event.detail.xhr.status === 200 && event.detail.target.tagName === 'FORM') {
+        const form = event.detail.target;
+        if (form.closest('[hx-get*="/partials/households/join"]') || form.action.includes('/api/households/join')) {
+            // Household join successful
+            document.dispatchEvent(new CustomEvent('householdJoined'));
+        }
+    }
 });
 
 // Utility function to show notifications

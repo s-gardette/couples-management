@@ -220,6 +220,53 @@
 
 {% block scripts %}
 <script>
+// Alpine.js functions for expense and household modals
+function expenseCreateForm(householdId) {
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0];
+    
+    return {
+        householdId: householdId,
+        form: {
+            title: '',
+            amount: '',
+            date: today,
+            category: '',
+            description: ''
+        },
+        
+        createExpense() {
+            // Form will be submitted via HTMX
+        },
+        
+        closeModal() {
+            // Use a more reliable approach to close modal
+            // Dispatch event that the parent page can listen to
+            window.dispatchEvent(new CustomEvent('closeExpenseModal'));
+        }
+    }
+}
+
+function householdCreateForm() {
+    return {
+        form: {
+            name: '',
+            description: '',
+            currency: 'USD'
+        },
+        
+        createHousehold() {
+            // Form will be submitted via HTMX
+        },
+        
+        closeModal() {
+            // Use a more reliable approach to close modal
+            // Dispatch event that the parent page can listen to
+            window.dispatchEvent(new CustomEvent('closeCreateModal'));
+        }
+    }
+}
+
 function expensesDashboard() {
     return {
         showCreateHouseholdModal: false,
@@ -266,15 +313,128 @@ function expensesDashboard() {
     }
 }
 
+// Handle successful form submissions via HTMX
+document.addEventListener('htmx:afterRequest', function(event) {
+    if (event.detail.xhr.status === 201 && event.detail.target.tagName === 'FORM') {
+        const form = event.detail.target;
+        if (form.closest('[hx-get*="/partials/households/create"]') || form.action.includes('/api/households')) {
+            // Household creation successful
+            document.dispatchEvent(new CustomEvent('householdCreated'));
+        } else if (form.closest('[hx-get*="/partials/expenses/create"]') || form.action.includes('/api/expenses')) {
+            // Expense creation successful
+            document.dispatchEvent(new CustomEvent('expenseCreated'));
+        }
+    }
+});
+
+// Handle successful household/expense creation
+document.addEventListener('householdCreated', function(event) {
+    // Close modal and refresh households
+    const mainComponent = document.querySelector('[x-data*="expensesDashboard"]');
+    if (mainComponent && mainComponent._x_dataStack) {
+        const data = mainComponent._x_dataStack[0];
+        if (data) {
+            data.showCreateHouseholdModal = false;
+            data.refreshHouseholds();
+        }
+    }
+    
+    // Show success message
+    showNotification('Household created successfully!', 'success');
+});
+
+document.addEventListener('expenseCreated', function(event) {
+    // Close modal and refresh expenses
+    const mainComponent = document.querySelector('[x-data*="expensesDashboard"]');
+    if (mainComponent && mainComponent._x_dataStack) {
+        const data = mainComponent._x_dataStack[0];
+        if (data) {
+            data.showCreateExpenseModal = false;
+            data.refreshExpenses();
+        }
+    }
+    
+    // Show success message
+    showNotification('Expense created successfully!', 'success');
+});
+
 // Handle modal close on escape key
 document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
         // Close any open modals
-        Alpine.store('modals', {
-            showCreateHouseholdModal: false,
-            showCreateExpenseModal: false
-        });
+        const mainComponent = document.querySelector('[x-data*="expensesDashboard"]');
+        if (mainComponent && mainComponent._x_dataStack) {
+            const data = mainComponent._x_dataStack[0];
+            if (data) {
+                data.showCreateHouseholdModal = false;
+                data.showCreateExpenseModal = false;
+            }
+        }
     }
 });
+
+// Handle modal close events from partials
+window.addEventListener('closeCreateModal', function(event) {
+    // Find the Alpine component and close the create household modal
+    const mainComponent = document.querySelector('[x-data*="expensesDashboard"]');
+    if (mainComponent && mainComponent._x_dataStack) {
+        const data = mainComponent._x_dataStack[0];
+        if (data) {
+            data.showCreateHouseholdModal = false;
+        }
+    }
+});
+
+window.addEventListener('closeExpenseModal', function(event) {
+    // Find the Alpine component and close the create expense modal
+    const mainComponent = document.querySelector('[x-data*="expensesDashboard"]');
+    if (mainComponent && mainComponent._x_dataStack) {
+        const data = mainComponent._x_dataStack[0];
+        if (data) {
+            data.showCreateExpenseModal = false;
+        }
+    }
+});
+
+// Utility function to show notifications
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 z-50 max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden`;
+    
+    const bgColor = type === 'success' ? 'bg-green-50' : type === 'error' ? 'bg-red-50' : 'bg-blue-50';
+    const textColor = type === 'success' ? 'text-green-800' : type === 'error' ? 'text-red-800' : 'text-blue-800';
+    
+    notification.innerHTML = `
+        <div class="p-4">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <svg class="h-6 w-6 ${textColor}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="ml-3 w-0 flex-1 pt-0.5">
+                    <p class="text-sm font-medium ${textColor}">${message}</p>
+                </div>
+                <div class="ml-4 flex-shrink-0 flex">
+                    <button class="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()">
+                        <span class="sr-only">Close</span>
+                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
 </script>
 {% endblock %} 
