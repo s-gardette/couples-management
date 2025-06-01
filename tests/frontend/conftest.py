@@ -50,6 +50,9 @@ def authenticated_frontend_client(db_session: Session, test_user: User):
     """Test client with authenticated user for frontend testing."""
     client = TestClient(app)
     
+    # Store the original get_db dependency
+    original_get_db = app.dependency_overrides.get(get_db)
+    
     # Override the get_db dependency to use our test db_session
     def override_get_db():
         try:
@@ -59,28 +62,29 @@ def authenticated_frontend_client(db_session: Session, test_user: User):
 
     app.dependency_overrides[get_db] = override_get_db
     
-    # First try to login through the actual login endpoint
-    login_data = {
-        "username": test_user.email,  # Login uses email as username
-        "password": "TestPassword123!"
-    }
-    
-    # Post to login form to set cookies
-    login_response = client.post("/auth/login", data=login_data, follow_redirects=False)
-    
-    # If login endpoint doesn't work or doesn't set cookies, manually set auth
-    if login_response.status_code not in [200, 302, 307]:
-        # Fallback: manually set authentication using tokens
+    try:
+        # Use the token-based authentication approach directly
+        # since frontend tests are testing templates, not the login flow
         from app.core.utils.security import create_access_token, create_refresh_token
         
         access_token = create_access_token(subject=str(test_user.id))
         refresh_token = create_refresh_token(subject=str(test_user.id))
         
-        # Set authentication cookies
+        # Set authentication cookies for cookie-based auth
         client.cookies.set("access_token", access_token)
         client.cookies.set("refresh_token", refresh_token)
-    
-    return client
+        
+        # Also set the Authorization header for API calls
+        client.headers.update({"Authorization": f"Bearer {access_token}"})
+        
+        yield client
+        
+    finally:
+        # Restore the original dependency override
+        if original_get_db:
+            app.dependency_overrides[get_db] = original_get_db
+        else:
+            app.dependency_overrides.pop(get_db, None)
 
 
 @pytest.fixture

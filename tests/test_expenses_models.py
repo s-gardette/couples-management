@@ -302,12 +302,13 @@ class TestCategoryModel:
         assert global_cat.is_default is True
         
         # Test household category creation
+        test_uuid = "12345678-1234-1234-1234-123456789012"
         household_cat = Category.create_household_category(
             name="Household Test",
-            household_id="test-id",
+            household_id=test_uuid,
             icon="house"
         )
-        assert household_cat.household_id == "test-id"
+        assert str(household_cat.household_id) == test_uuid
         assert household_cat.name == "Household Test"
         
         # Test default categories

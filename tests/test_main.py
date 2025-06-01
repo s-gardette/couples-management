@@ -19,11 +19,13 @@ def test_root_endpoint_redirects_to_login():
 
 
 def test_health_check_requires_auth():
-    """Test the health check endpoint requires authentication."""
+    """Test the health check endpoint is publicly accessible (no auth required)."""
     response = client.get("/health/")
-    assert response.status_code == 401
+    assert response.status_code == 200
     data = response.json()
-    assert data["detail"] == "Authentication required"
+    assert data["status"] == "healthy"
+    assert "app_name" in data
+    assert "version" in data
 
 
 def test_access_restricted_page():

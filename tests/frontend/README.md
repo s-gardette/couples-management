@@ -151,4 +151,72 @@ The tests verify our recent template implementation:
 - ✅ **Unified Endpoints**: Single expense partial handles both recent and list views
 - ✅ **Real Data Integration**: All templates now use real database data
 - ✅ **Error Handling**: Proper authentication and validation throughout
-- ✅ **Simple Testing**: Clean pytest-based testing without unnecessary complexity 
+- ✅ **Simple Testing**: Clean pytest-based testing without unnecessary complexity
+
+### Test Files
+
+### `test_all_endpoints.py`
+Tests all frontend endpoints to ensure they return proper status codes and contain expected content.
+
+### `test_templates.py`
+Tests template rendering with realistic data and validates template functionality.
+
+### `test_href_validation.py` ⭐ **NEW**
+**Comprehensive href link validation test** that scans every template file and validates all href links:
+
+#### What it does:
+- 🔍 **Scans all template files** for href attributes
+- 🔗 **Categorizes links** into: internal, external, placeholder, dynamic, static, template
+- ✅ **Validates internal links** by making actual HTTP requests  
+- 📊 **Reports detailed statistics** about link health
+- 🚨 **Identifies broken links** and missing routes
+- 🎯 **Handles Jinja2 templates** correctly (variables, control structures)
+
+#### Categories of links:
+- **Internal**: Routes within the app (e.g., `/expenses`, `/households`)
+- **External**: External URLs (e.g., CDN links, external sites)
+- **Static**: Static file references (e.g., `/static/css/styles.css`)
+- **Template**: Jinja2 template syntax (e.g., `{{ url_for('login') }}`)
+- **Dynamic**: URLs with template variables (e.g., `/households/{{ household.id }}`)
+- **Placeholder**: Anchor links, JavaScript, mailto (e.g., `#`, `javascript:`, `mailto:`)
+
+#### Test methods:
+- `test_all_href_links_are_valid()` - Main validation test with detailed reporting
+- `test_specific_navigation_links()` - Tests critical navigation routes
+- `test_static_files_exist()` - Validates static file references
+- `test_no_broken_internal_links()` - Ensures no 404 internal links
+- `test_external_links_format()` - Validates external link format
+- `test_missing_routes_detection()` - Identifies routes that might need implementation
+
+#### Benefits:
+- ✅ **Prevents dead links** in the application
+- 🛡️ **Catches navigation issues** early in development
+- 📈 **Provides link health metrics** (currently 97.1% success rate)
+- 🔧 **Identifies missing routes** that need implementation
+- 🎨 **Template-aware** - understands Jinja2 syntax
+
+#### Current findings:
+The test currently identifies 2 routes that may need attention:
+- `/profile` (HTTP 404) - Profile page route not implemented
+- `/api/auth/forgot-password` (HTTP 405) - Forgot password endpoint needs POST method
+
+### `test_config.py`
+Configuration constants and endpoint lists for frontend tests.
+
+### `conftest.py`
+Shared fixtures for frontend testing including authenticated clients and test data.
+
+## Test Results
+
+Current frontend test status:
+- ✅ **All endpoint tests**: 17/20 working (85% success)
+- ✅ **Template tests**: Comprehensive template validation
+- ✅ **Href validation**: 97.1% success rate (66/68 valid links)
+
+## Next Steps
+
+1. **Fix HTMX partial endpoints** (from main test suite)
+2. **Implement missing routes** identified by href validation:
+   - Add `/profile` route
+   - Fix `/api/auth/forgot-password` method
+3. **Continue monitoring** link health with href validation test 

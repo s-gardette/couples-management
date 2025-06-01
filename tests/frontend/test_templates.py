@@ -31,7 +31,7 @@ class TestAuthenticatedTemplates:
     
     def test_root_redirect(self, authenticated_frontend_client: TestClient):
         """Test root endpoint redirects properly."""
-        response = authenticated_frontend_client.get("/", allow_redirects=False)
+        response = authenticated_frontend_client.get("/", follow_redirects=False)
         # Should redirect to onboarding or dashboard
         assert response.status_code in [200, 302, 307]
     
@@ -47,7 +47,7 @@ class TestAuthenticatedTemplates:
     
     def test_expenses_redirect(self, authenticated_frontend_client: TestClient):
         """Test expenses redirect endpoint."""
-        response = authenticated_frontend_client.get("/expenses", allow_redirects=False)
+        response = authenticated_frontend_client.get("/expenses", follow_redirects=False)
         assert response.status_code in [200, 302, 307]
     
     def test_households_page(self, authenticated_frontend_client: TestClient):
@@ -70,7 +70,7 @@ class TestAuthenticatedTemplates:
     
     def test_expense_create_form_redirect(self, authenticated_frontend_client: TestClient):
         """Test expense creation form redirect."""
-        response = authenticated_frontend_client.get("/expenses/create", allow_redirects=False)
+        response = authenticated_frontend_client.get("/expenses/create", follow_redirects=False)
         assert response.status_code in [200, 302, 307]
     
     def test_expense_create_modal(self, authenticated_frontend_client: TestClient):
