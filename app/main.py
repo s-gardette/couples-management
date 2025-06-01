@@ -27,6 +27,7 @@ from app.modules.expenses.routers import (
     payments_router,
     balances_router
 )
+from app.modules.live.routers import live_router
 from app.modules.expenses.services import HouseholdService
 from app.modules.expenses.models.user_household import UserHousehold
 
@@ -98,6 +99,9 @@ if settings.require_authentication_for_all:
     app.include_router(analytics_router, prefix="/api", dependencies=[Depends(require_authentication)])
     app.include_router(payments_router, prefix="/api", dependencies=[Depends(require_authentication)])
     app.include_router(balances_router, prefix="/api", dependencies=[Depends(require_authentication)])
+    
+    # Live updates module router
+    app.include_router(live_router, dependencies=[Depends(require_authentication)])
 else:
     # Normal routing (for development)
     app.include_router(health.router, prefix="/health", tags=["health"])
@@ -112,6 +116,9 @@ else:
     app.include_router(analytics_router, prefix="/api")
     app.include_router(payments_router, prefix="/api")
     app.include_router(balances_router, prefix="/api")
+    
+    # Live updates module router (development mode)
+    app.include_router(live_router)
 
 
 # Access restricted page (only public endpoint)
