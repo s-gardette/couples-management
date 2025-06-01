@@ -12,8 +12,8 @@ from fastapi import APIRouter, Depends, HTTPException, Form, Request, Response
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
-from app.core.database import get_db
-from app.core.auth import get_current_user
+from app.database import get_db
+from app.modules.auth.dependencies import get_current_user
 from app.modules.auth.models.user import User
 from app.modules.live.services.live_service import LiveService
 from app.modules.live.services.notification_service import NotificationService
