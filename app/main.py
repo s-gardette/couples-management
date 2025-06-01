@@ -5,11 +5,12 @@ Main FastAPI application entry point.
 import logging
 from contextlib import asynccontextmanager
 from uuid import UUID
-from fastapi import FastAPI, Request, Depends, HTTPException, status, Form
+from fastapi import FastAPI, Request, Depends, HTTPException, status, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSONResponse
+from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db
@@ -17,6 +18,7 @@ from app.core.logging import setup_logging
 from app.core.routers import health
 from app.modules.auth.routers import auth_router, users_router
 from app.modules.auth.routers.admin import router as admin_router
+from app.modules.admin.routers import admin_ui_router
 from app.modules.auth.dependencies import require_authentication, get_current_user_optional, get_current_user_from_cookie_or_header
 from app.modules.auth.utils.startup import initialize_auth_system
 from app.modules.auth.schemas.admin import AdminAccessRestrictedResponse
@@ -31,6 +33,8 @@ from app.modules.expenses.routers import (
 from app.modules.live.routers import live_router
 from app.modules.expenses.services import HouseholdService
 from app.modules.expenses.models.user_household import UserHousehold
+from app.modules.auth.models.user import User
+from app.modules.auth.services.auth_service import AuthService
 
 # Setup logging first
 log_files = setup_logging()
@@ -106,6 +110,9 @@ if settings.require_authentication_for_all:
     app.include_router(users_router, prefix="/api", dependencies=[Depends(require_authentication)])
     app.include_router(admin_router, prefix="/api", dependencies=[Depends(require_authentication)])
     
+    # Admin UI router - uses its own admin authentication
+    app.include_router(admin_ui_router)
+    
     # Expenses module routers
     app.include_router(households_router, prefix="/api", dependencies=[Depends(require_authentication)])
     app.include_router(expenses_router, prefix="/api", dependencies=[Depends(require_authentication)])
@@ -122,6 +129,9 @@ else:
     app.include_router(auth_router, prefix="/api")
     app.include_router(users_router, prefix="/api")
     app.include_router(admin_router, prefix="/api")
+    
+    # Admin UI router - uses its own admin authentication
+    app.include_router(admin_ui_router)
     
     # Expenses module routers (development mode)
     app.include_router(households_router, prefix="/api")
@@ -164,16 +174,124 @@ async def login_page(request: Request):
     )
 
 
-# Logout route (frontend)
-@app.get("/logout", response_class=HTMLResponse)
-async def logout_page(
+# Logout route (frontend and API)
+@app.post("/logout")
+@app.get("/logout")
+async def logout(
     request: Request,
-    next: str = "/"
+    next: str = Query("/"),
+    current_user: User = Depends(get_current_user_from_cookie_or_header),
+    db: Session = Depends(get_db)
 ):
-    """Frontend logout - clears cookies and redirects."""
-    response = RedirectResponse(url=next, status_code=302)
-    response.delete_cookie(key="access_token", samesite="lax")
-    response.delete_cookie(key="refresh_token", samesite="lax")
+    """Logout - supports both frontend and API requests."""
+    # Initialize auth service
+    auth_service = AuthService()
+    
+    # Get the token from request
+    token = None
+    auth_header = request.headers.get("authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+    else:
+        # Try cookie
+        token = request.cookies.get("access_token")
+    
+    # If we have a user and token, properly logout via service
+    if current_user and token:
+        try:
+            success, message = await auth_service.logout_user(
+                user_id=current_user.id,
+                db=db,
+                access_token=token
+            )
+            
+            logger.info(f"User {current_user.email} logged out: {message}")
+        except Exception as e:
+            logger.error(f"Error during logout for {current_user.email}: {e}")
+    
+    # Determine if this is an API request
+    content_type = request.headers.get("content-type", "")
+    accept_header = request.headers.get("accept", "")
+    is_api_request = (
+        "application/json" in content_type or 
+        "application/json" in accept_header or
+        auth_header and auth_header.startswith("Bearer ")
+    )
+    
+    if is_api_request:
+        # API response - return JSON
+        from fastapi.responses import JSONResponse
+        response = JSONResponse({
+            "success": True,
+            "message": "Logged out successfully",
+            "redirect_url": next
+        })
+    else:
+        # Frontend response - redirect
+        response = RedirectResponse(url=next, status_code=302)
+    
+    # Clear authentication cookies
+    response.delete_cookie(key="access_token", samesite="lax", httponly=True)
+    response.delete_cookie(key="refresh_token", samesite="lax", httponly=True)
+    
+    return response
+
+
+# Admin logout route specifically for admin interface
+@app.post("/admin/logout")
+@app.get("/admin/logout")
+async def admin_logout(
+    request: Request,
+    next: str = Query("/admin/login"),
+    current_user: User = Depends(get_current_user_from_cookie_or_header),
+    db: Session = Depends(get_db)
+):
+    """Admin logout - redirects to admin login page."""
+    # Initialize auth service
+    auth_service = AuthService()
+    
+    # Get the token from request
+    token = None
+    auth_header = request.headers.get("authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+    else:
+        # Try cookie
+        token = request.cookies.get("access_token")
+    
+    # If we have a user and token, properly logout via service
+    if current_user and token:
+        try:
+            success, message = await auth_service.logout_user(
+                user_id=current_user.id,
+                db=db,
+                access_token=token
+            )
+            
+            logger.info(f"Admin {current_user.email} logged out: {message}")
+        except Exception as e:
+            logger.error(f"Error during admin logout for {current_user.email}: {e}")
+    
+    # Determine if this is an API request
+    auth_header = request.headers.get("authorization")
+    is_api_request = auth_header and auth_header.startswith("Bearer ")
+    
+    if is_api_request:
+        # API response - return JSON
+        from fastapi.responses import JSONResponse
+        response = JSONResponse({
+            "success": True,
+            "message": "Admin logged out successfully",
+            "redirect_url": next
+        })
+    else:
+        # Frontend response - redirect to admin login
+        response = RedirectResponse(url=next, status_code=302)
+    
+    # Clear authentication cookies
+    response.delete_cookie(key="access_token", samesite="lax", httponly=True)
+    response.delete_cookie(key="refresh_token", samesite="lax", httponly=True)
+    
     return response
 
 

@@ -1,0 +1,618 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Edit User - Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Edit User</h1>
+            <p class="text-gray-600">Update user account information and permissions</p>
+        </div>
+        <div class="flex space-x-3">
+            <a href="/admin/users" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                ← Back to Users
+            </a>
+        </div>
+    </div>
+
+    <!-- Error Message -->
+    {% if error_message %}
+    <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm">{{ error_message }}</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- User Info Card -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <div class="flex items-center space-x-4 mb-6">
+            <div class="h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center">
+                <span class="text-xl font-medium text-indigo-800">
+                    {{ user.first_name[0] if user.first_name else user.email[0]|upper }}
+                </span>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900">
+                    {% if user.first_name or user.last_name %}
+                        {{ user.first_name or '' }} {{ user.last_name or '' }}
+                    {% else %}
+                        {{ user.username or 'No name' }}
+                    {% endif %}
+                </h3>
+                <p class="text-gray-600">{{ user.email }}</p>
+                <div class="flex items-center space-x-2 mt-1">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                        {% if user.role == 'admin' %}bg-indigo-100 text-indigo-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                        {{ user.role|title }}
+                    </span>
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                        {% if user.is_active %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                        {% if user.is_active %}Active{% else %}Inactive{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Form -->
+        <form id="edit-user-form" class="space-y-6">
+            <!-- Personal Information -->
+            <div>
+                <h4 class="text-md font-medium text-gray-900 mb-4">Personal Information</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="first_name" class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                        <input type="text" 
+                               id="first_name" 
+                               name="first_name" 
+                               value="{{ user.first_name or '' }}"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label for="last_name" class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                        <input type="text" 
+                               id="last_name" 
+                               name="last_name" 
+                               value="{{ user.last_name or '' }}"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account Information -->
+            <div>
+                <h4 class="text-md font-medium text-gray-900 mb-4">Account Information</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                        <input type="text" 
+                               id="username" 
+                               name="username" 
+                               value="{{ user.username or '' }}"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <p class="text-xs text-gray-500 mt-1">Used for login alongside email</p>
+                    </div>
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                        <input type="email" 
+                               id="email" 
+                               name="email" 
+                               value="{{ user.email }}"
+                               required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <p class="text-xs text-gray-500 mt-1">Primary email address for login</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Role and Permissions -->
+            <div>
+                <h4 class="text-md font-medium text-gray-900 mb-4">Role and Permissions</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="role" class="block text-sm font-medium text-gray-700 mb-2">User Role</label>
+                        <select id="role" 
+                                name="role" 
+                                {% if user.id == current_user.id|string %}disabled{% endif %}
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 {% if user.id == current_user.id|string %}bg-gray-100{% endif %}">
+                            <option value="user" {% if user.role == 'user' %}selected{% endif %}>User</option>
+                            <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+                        </select>
+                        {% if user.id == current_user.id|string %}
+                        <p class="text-xs text-yellow-600 mt-1">You cannot change your own role</p>
+                        {% else %}
+                        <p class="text-xs text-gray-500 mt-1">Admin users have full system access</p>
+                        {% endif %}
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex items-center">
+                            <input type="checkbox" 
+                                   id="is_active" 
+                                   name="is_active"
+                                   {% if user.is_active %}checked{% endif %}
+                                   {% if user.id == current_user.id|string and user.role == 'admin' %}disabled{% endif %}
+                                   class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                            <label for="is_active" class="ml-2 text-sm text-gray-700">
+                                Account is active
+                            </label>
+                        </div>
+                        {% if user.id == current_user.id|string and user.role == 'admin' %}
+                        <p class="text-xs text-yellow-600">You cannot deactivate your own admin account</p>
+                        {% endif %}
+
+                        <div class="flex items-center">
+                            <input type="checkbox" 
+                                   id="email_verified" 
+                                   name="email_verified"
+                                   {% if user.email_verified %}checked{% endif %}
+                                   class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                            <label for="email_verified" class="ml-2 text-sm text-gray-700">
+                                Email is verified
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account Metadata -->
+            <div>
+                <h4 class="text-md font-medium text-gray-900 mb-4">Account Details</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">User ID</label>
+                        <input type="text" 
+                               value="{{ user.id }}" 
+                               readonly
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500 font-mono text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Account Created</label>
+                        <input type="text" 
+                               value="{{ user.created_at.strftime('%B %d, %Y at %I:%M %p') if user.created_at else 'Unknown' }}" 
+                               readonly
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Last Login</label>
+                        <input type="text" 
+                               value="{{ user.last_login_at.strftime('%B %d, %Y at %I:%M %p') if user.last_login_at else 'Never' }}" 
+                               readonly
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Password Management -->
+            <div>
+                <h4 class="text-md font-medium text-gray-900 mb-4">Password Management</h4>
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4">
+                    <p class="text-sm text-gray-600 mb-4">
+                        Manage the user's password and authentication settings.
+                    </p>
+                    
+                    <!-- Change Password Form -->
+                    <div class="border-b border-gray-200 pb-4">
+                        <h5 class="text-sm font-medium text-gray-900 mb-3">Set New Password</h5>
+                        <form id="change-password-form" class="space-y-3">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="new_password" class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                                    <input type="password" 
+                                           id="new_password" 
+                                           name="new_password" 
+                                           required
+                                           minlength="6"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                    <p class="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
+                                </div>
+                                <div class="flex items-center justify-center">
+                                    <div class="flex items-center">
+                                        <input type="checkbox" 
+                                               id="force_change_on_login" 
+                                               name="force_change_on_login"
+                                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                                        <label for="force_change_on_login" class="ml-2 text-sm text-gray-700">
+                                            Force change on next login
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex justify-start">
+                                <button type="submit" 
+                                        class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                                    Change Password
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Send Reset Link -->
+                    <div>
+                        <h5 class="text-sm font-medium text-gray-900 mb-3">Password Reset Link</h5>
+                        <p class="text-sm text-gray-600 mb-3">
+                            Send a password reset link to the user's email address. They can use this link to set a new password themselves.
+                        </p>
+                        <button id="send-reset-link-btn"
+                                type="button"
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                            Send Reset Link
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+                <a href="/admin/users" 
+                   class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-md text-sm font-medium">
+                    Cancel
+                </a>
+                <!-- Test button for debugging -->
+                <button type="button" 
+                        onclick="testFunction()"
+                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    Test JS
+                </button>
+                <button type="submit" 
+                        id="save-changes-btn"
+                        onclick="handleSaveClick(event)"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Simple test function to verify JavaScript is working
+function testFunction() {
+    console.log('Test function called - JavaScript is working!');
+    alert('JavaScript is working! Console: ' + typeof console);
+    
+    // Check if elements exist
+    const form = document.getElementById('edit-user-form');
+    const button = document.getElementById('save-changes-btn');
+    console.log('Form exists:', !!form);
+    console.log('Button exists:', !!button);
+    console.log('AuthUtils exists:', typeof window.AuthUtils);
+    
+    if (window.AuthUtils) {
+        const token = window.AuthUtils.getAccessToken();
+        console.log('Token exists:', !!token);
+    }
+}
+
+// Direct save click handler
+function handleSaveClick(event) {
+    console.log('Save button clicked directly!');
+    event.preventDefault();
+    
+    const form = document.getElementById('edit-user-form');
+    if (form) {
+        console.log('Form found, triggering submission logic');
+        submitEditForm();
+    } else {
+        console.error('Form not found!');
+        alert('Error: Form not found!');
+    }
+}
+
+// Centralized form submission logic
+async function submitEditForm() {
+    console.log('submitEditForm called');
+    
+    const saveBtn = document.getElementById('save-changes-btn');
+    const editForm = document.getElementById('edit-user-form');
+    
+    if (!saveBtn || !editForm) {
+        console.error('Required elements not found');
+        alert('Error: Required form elements not found');
+        return;
+    }
+    
+    const originalText = saveBtn.textContent;
+    
+    try {
+        console.log('Starting form submission...');
+        
+        // Disable button and show loading state
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+        
+        // Prepare form data
+        const formData = new FormData(editForm);
+        console.log('Form data prepared');
+        
+        // Check if AuthUtils exists
+        if (!window.AuthUtils) {
+            throw new Error('AuthUtils not available');
+        }
+        
+        // Get authentication token
+        const token = window.AuthUtils.getAccessToken();
+        console.log('Token retrieved:', !!token);
+        
+        if (!token) {
+            throw new Error('No authentication token found. Please log in again.');
+        }
+        
+        const submitUrl = `/admin/users/{{ user.id }}/edit`;
+        console.log('Submitting to:', submitUrl);
+        
+        // Submit form with proper authentication
+        const response = await fetch(submitUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+        
+        console.log('Response received:', {
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok
+        });
+        
+        if (response.ok) {
+            console.log('Response successful');
+            showNotification('User updated successfully!', 'success');
+            setTimeout(() => {
+                window.location.href = '/admin/users';
+            }, 1500);
+        } else if (response.status === 401) {
+            console.error('Authentication error');
+            showNotification('Authentication required. Please log in again.', 'error');
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 2000);
+        } else if (response.status === 403) {
+            console.error('Permission error');
+            showNotification('You do not have permission to edit users.', 'error');
+        } else {
+            console.error('Server error:', response.status);
+            const errorText = await response.text();
+            console.log('Error response:', errorText);
+            showNotification('Failed to update user. Please try again.', 'error');
+        }
+        
+    } catch (error) {
+        console.error('Form submission error:', error);
+        showNotification('Error: ' + error.message, 'error');
+    } finally {
+        // Re-enable button
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Edit user page script loaded');
+    
+    // Debug: Check if required elements exist
+    const editForm = document.getElementById('edit-user-form');
+    const saveBtn = document.getElementById('save-changes-btn');
+    
+    console.log('Edit form found:', !!editForm);
+    console.log('Save button found:', !!saveBtn);
+    console.log('AuthUtils available:', typeof window.AuthUtils);
+    
+    // Check for authentication token
+    if (window.AuthUtils) {
+        const token = window.AuthUtils.getAccessToken();
+        console.log('Access token available:', !!token);
+        if (token) {
+            console.log('Token preview:', token.substring(0, 20) + '...');
+        }
+    }
+    
+    // Handle main user edit form submission
+    if (editForm) {
+        console.log('Attaching event listener to edit form');
+        editForm.addEventListener('submit', async function(e) {
+            console.log('Form submit event triggered via addEventListener');
+            e.preventDefault();
+            await submitEditForm();
+        });
+    } else {
+        console.error('Edit form not found!');
+    }
+    
+    // Handle password change form
+    const changePasswordForm = document.getElementById('change-password-form');
+    if (changePasswordForm) {
+        changePasswordForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(changePasswordForm);
+            const newPassword = formData.get('new_password');
+            
+            if (!newPassword || newPassword.length < 6) {
+                showNotification('Password must be at least 6 characters long', 'error');
+                return;
+            }
+            
+            try {
+                // Get authentication token
+                const token = AuthUtils.getAccessToken();
+                if (!token) {
+                    throw new Error('Authentication required');
+                }
+                
+                const response = await fetch(`/admin/users/{{ user.id }}/change-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(result.message, 'success');
+                    changePasswordForm.reset();
+                } else {
+                    showNotification(result.message, 'error');
+                }
+            } catch (error) {
+                showNotification('An error occurred while changing password', 'error');
+                console.error('Password change error:', error);
+            }
+        });
+    }
+    
+    // Handle send reset link button
+    const sendResetLinkBtn = document.getElementById('send-reset-link-btn');
+    if (sendResetLinkBtn) {
+        sendResetLinkBtn.addEventListener('click', async function() {
+            try {
+                sendResetLinkBtn.disabled = true;
+                sendResetLinkBtn.textContent = 'Sending...';
+                
+                // Get authentication token
+                const token = AuthUtils.getAccessToken();
+                if (!token) {
+                    throw new Error('Authentication required');
+                }
+                
+                const response = await fetch(`/admin/users/{{ user.id }}/send-reset-link`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(result.message, 'success');
+                    
+                    // Show the reset link in development (since reset page doesn't exist yet)
+                    if (result.reset_link) {
+                        setTimeout(() => {
+                            showResetLinkModal(result.reset_link);
+                        }, 1000);
+                    }
+                } else {
+                    showNotification(result.message, 'error');
+                }
+            } catch (error) {
+                showNotification('An error occurred while sending reset link', 'error');
+                console.error('Reset link error:', error);
+            } finally {
+                sendResetLinkBtn.disabled = false;
+                sendResetLinkBtn.textContent = 'Send Reset Link';
+            }
+        });
+    }
+});
+
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 z-50 max-w-sm p-4 rounded-md shadow-lg ${
+        type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' : 
+        type === 'error' ? 'bg-red-100 text-red-800 border border-red-200' : 
+        'bg-blue-100 text-blue-800 border border-blue-200'
+    }`;
+    
+    notification.innerHTML = `
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                    ${type === 'success' ? 
+                        '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />' :
+                        type === 'error' ?
+                        '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />' :
+                        '<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />'
+                    }
+                </svg>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm">${message}</p>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Remove after 5 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+}
+
+function showResetLinkModal(resetLink) {
+    // Create modal for showing reset link (temporary solution until reset page is implemented)
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 z-50 overflow-y-auto';
+    modal.innerHTML = `
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeResetLinkModal()"></div>
+            <div class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Password Reset Link Generated</h3>
+                    <button type="button" class="text-gray-400 hover:text-gray-500" onclick="closeResetLinkModal()">
+                        <span class="sr-only">Close</span>
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="space-y-4">
+                    <p class="text-sm text-gray-600">
+                        A password reset link has been generated. Since the password reset page is not yet implemented in the frontend, here is the link for testing:
+                    </p>
+                    <div class="bg-gray-50 border border-gray-200 rounded-md p-3">
+                        <p class="text-xs text-gray-500 mb-1">Reset Link:</p>
+                        <code class="text-sm text-gray-800 break-all">${resetLink}</code>
+                    </div>
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                        <p class="text-sm text-yellow-800">
+                            <strong>Note:</strong> In production, this link would be sent via email to the user. The frontend password reset page will be implemented later.
+                        </p>
+                    </div>
+                    <div class="flex justify-end space-x-2">
+                        <button onclick="copyResetLink('${resetLink}')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
+                            Copy Link
+                        </button>
+                        <button onclick="closeResetLinkModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-3 py-1 rounded text-sm">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    window.resetLinkModal = modal;
+}
+
+function closeResetLinkModal() {
+    if (window.resetLinkModal) {
+        window.resetLinkModal.remove();
+        window.resetLinkModal = null;
+    }
+}
+
+function copyResetLink(link) {
+    navigator.clipboard.writeText(link).then(() => {
+        showNotification('Reset link copied to clipboard', 'success');
+    }).catch(() => {
+        showNotification('Failed to copy link to clipboard', 'error');
+    });
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Denied - Admin Panel</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8">
+            <div class="text-center">
+                <div class="mx-auto h-24 w-24 text-red-500 mb-4">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.963-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                </div>
+                <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
+                    🛡️ Access Denied
+                </h2>
+                <p class="mt-2 text-sm text-gray-600">
+                    You don't have permission to access the admin panel.
+                </p>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow px-8 py-6">
+                <div class="space-y-4">
+                    <div class="text-center">
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">
+                            Admin Access Required
+                        </h3>
+                        <p class="text-gray-600 mb-4">
+                            Only administrators can access this area. If you believe you should have access, please contact an administrator.
+                        </p>
+                    </div>
+                    
+                    <div class="border-t border-gray-200 pt-4">
+                        <div class="flex flex-col space-y-3">
+                            <a href="/" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                                Return to Application
+                            </a>
+                            
+                            <a href="/logout" class="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                                Logout
+                            </a>
+                        </div>
+                    </div>
+                    
+                    {% if admin_contact_email %}
+                    <div class="border-t border-gray-200 pt-4">
+                        <p class="text-sm text-gray-600 text-center">
+                            Need admin access? Contact: 
+                            <a href="mailto:{{ admin_contact_email }}" class="text-blue-600 hover:text-blue-800 font-medium">
+                                {{ admin_contact_email }}
+                            </a>
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="text-center">
+                <p class="text-xs text-gray-500">
+                    Household Management System Admin Panel
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

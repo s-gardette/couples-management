@@ -1,0 +1,59 @@
+<div class="space-y-4">
+    <!-- Overall Status -->
+    <div class="flex items-center justify-between">
+        <h4 class="text-lg font-medium text-gray-900">System Status</h4>
+        <div class="flex items-center">
+            {% if health.overall_status == "healthy" %}
+            <div class="w-3 h-3 bg-green-400 rounded-full mr-2"></div>
+            <span class="text-sm font-medium text-green-800">Healthy</span>
+            {% elif health.overall_status == "degraded" %}
+            <div class="w-3 h-3 bg-yellow-400 rounded-full mr-2"></div>
+            <span class="text-sm font-medium text-yellow-800">Degraded</span>
+            {% else %}
+            <div class="w-3 h-3 bg-red-400 rounded-full mr-2"></div>
+            <span class="text-sm font-medium text-red-800">Error</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Health Checks -->
+    <div class="space-y-3">
+        {% for check_name, check_data in health.checks.items() %}
+        <div class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-md">
+            <div class="flex items-center">
+                {% if check_data.status == "healthy" %}
+                <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                </svg>
+                {% else %}
+                <svg class="w-4 h-4 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                </svg>
+                {% endif %}
+                <span class="text-sm font-medium text-gray-700 capitalize">{{ check_name.replace('_', ' ') }}</span>
+            </div>
+            <span class="text-xs text-gray-500">{{ check_data.message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- System Metrics -->
+    <div class="mt-6 grid grid-cols-3 gap-4">
+        <div class="text-center">
+            <div class="text-lg font-semibold text-gray-900">{{ health.metrics.response_time }}</div>
+            <div class="text-xs text-gray-500">Avg Response</div>
+        </div>
+        <div class="text-center">
+            <div class="text-lg font-semibold text-gray-900">{{ health.metrics.error_rate }}</div>
+            <div class="text-xs text-gray-500">Error Rate</div>
+        </div>
+        <div class="text-center">
+            <div class="text-lg font-semibold text-gray-900">{{ health.metrics.uptime }}</div>
+            <div class="text-xs text-gray-500">Uptime</div>
+        </div>
+    </div>
+
+    <div class="text-xs text-gray-500 text-center mt-4">
+        Last check: {{ health.last_check }}
+    </div>
+</div> 

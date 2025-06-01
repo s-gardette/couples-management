@@ -1,0 +1,230 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Application Settings - Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Application Settings</h1>
+            <p class="text-gray-600">Manage application configuration and system settings</p>
+        </div>
+        <div class="flex space-x-3">
+            <button class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                Export Config
+            </button>
+            <button class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                Save Changes
+            </button>
+        </div>
+    </div>
+
+    <!-- Settings Tabs -->
+    <div class="bg-white rounded-lg border border-gray-200">
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+                <button class="border-indigo-500 text-indigo-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    General
+                </button>
+                <button class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Security
+                </button>
+                <button class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Email
+                </button>
+                <button class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Features
+                </button>
+                <button class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Advanced
+                </button>
+            </nav>
+        </div>
+
+        <!-- General Settings -->
+        <div class="p-6 space-y-6">
+            <div>
+                <h3 class="text-lg font-medium text-gray-900 mb-4">General Settings</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Application Name</label>
+                        <input type="text" value="Household Management App" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Support Email</label>
+                        <input type="email" value="support@householdapp.com" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Default Timezone</label>
+                        <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="UTC">UTC</option>
+                            <option value="America/New_York">Eastern Time</option>
+                            <option value="America/Chicago">Central Time</option>
+                            <option value="America/Denver">Mountain Time</option>
+                            <option value="America/Los_Angeles">Pacific Time</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Default Currency</label>
+                        <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="USD">US Dollar (USD)</option>
+                            <option value="EUR">Euro (EUR)</option>
+                            <option value="GBP">British Pound (GBP)</option>
+                            <option value="CAD">Canadian Dollar (CAD)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="text-md font-medium text-gray-900 mb-3">User Registration</h4>
+                <div class="space-y-3">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="allow_registration" checked
+                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <label for="allow_registration" class="ml-2 text-sm text-gray-700">
+                            Allow new user registration
+                        </label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="require_email_verification" checked
+                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <label for="require_email_verification" class="ml-2 text-sm text-gray-700">
+                            Require email verification for new users
+                        </label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="admin_approval"
+                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <label for="admin_approval" class="ml-2 text-sm text-gray-700">
+                            Require admin approval for new accounts
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="text-md font-medium text-gray-900 mb-3">Household Limits</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Max Members per Household</label>
+                        <input type="number" value="10" min="2" max="50"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Max Households per User</label>
+                        <input type="number" value="3" min="1" max="10"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Max Expenses per Month</label>
+                        <input type="number" value="1000" min="100" max="10000"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Information -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">System Information</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <div class="text-sm font-medium text-gray-500">Application Version</div>
+                <div class="text-lg font-semibold text-gray-900">v1.0.0</div>
+            </div>
+            <div>
+                <div class="text-sm font-medium text-gray-500">Database Version</div>
+                <div class="text-lg font-semibold text-gray-900">PostgreSQL 15.0</div>
+            </div>
+            <div>
+                <div class="text-sm font-medium text-gray-500">Last Backup</div>
+                <div class="text-lg font-semibold text-gray-900">Never</div>
+            </div>
+            <div>
+                <div class="text-sm font-medium text-gray-500">Environment</div>
+                <div class="text-lg font-semibold text-gray-900">Development</div>
+            </div>
+            <div>
+                <div class="text-sm font-medium text-gray-500">Python Version</div>
+                <div class="text-lg font-semibold text-gray-900">3.12</div>
+            </div>
+            <div>
+                <div class="text-sm font-medium text-gray-500">FastAPI Version</div>
+                <div class="text-lg font-semibold text-gray-900">0.104.1</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Maintenance Actions -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Maintenance Actions</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                🗄️ Backup Database
+            </button>
+            <button class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                🔄 Refresh Cache
+            </button>
+            <button class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                🧹 Clean Temp Files
+            </button>
+            <button class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                📊 Update Statistics
+            </button>
+        </div>
+    </div>
+
+    <!-- Logs and Monitoring -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-medium text-gray-900">Recent System Logs</h3>
+            <button class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                View All Logs
+            </button>
+        </div>
+        
+        <div class="space-y-3">
+            <div class="flex items-start space-x-3 text-sm">
+                <div class="w-2 h-2 bg-green-400 rounded-full mt-2"></div>
+                <div class="flex-1">
+                    <div class="flex items-center justify-between">
+                        <span class="font-medium text-gray-900">Application started successfully</span>
+                        <span class="text-gray-500">2 minutes ago</span>
+                    </div>
+                    <div class="text-gray-600">System initialization completed</div>
+                </div>
+            </div>
+            
+            <div class="flex items-start space-x-3 text-sm">
+                <div class="w-2 h-2 bg-blue-400 rounded-full mt-2"></div>
+                <div class="flex-1">
+                    <div class="flex items-center justify-between">
+                        <span class="font-medium text-gray-900">Database connection established</span>
+                        <span class="text-gray-500">5 minutes ago</span>
+                    </div>
+                    <div class="text-gray-600">PostgreSQL connection pool initialized</div>
+                </div>
+            </div>
+            
+            <div class="flex items-start space-x-3 text-sm">
+                <div class="w-2 h-2 bg-green-400 rounded-full mt-2"></div>
+                <div class="flex-1">
+                    <div class="flex items-center justify-between">
+                        <span class="font-medium text-gray-900">Admin user authenticated</span>
+                        <span class="text-gray-500">1 hour ago</span>
+                    </div>
+                    <div class="text-gray-600">Admin access granted to admin@gmail.com</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

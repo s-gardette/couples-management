@@ -44,6 +44,16 @@
                     <a href="/profile" class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
                         Profile
                     </a>
+                    <!-- Admin link - only shown for admin users -->
+                    {% if current_user and current_user.is_admin() %}
+                    <a href="/admin/" class="text-indigo-600 hover:text-indigo-900 px-3 py-2 rounded-md text-sm font-medium border border-indigo-200 hover:bg-indigo-50">
+                        🛡️ Admin
+                    </a>
+                    {% endif %}
+                    <!-- Admin link for JavaScript fallback (hidden by default) -->
+                    <a id="admin-link" href="/admin/" class="text-indigo-600 hover:text-indigo-900 px-3 py-2 rounded-md text-sm font-medium border border-indigo-200 hover:bg-indigo-50 hidden">
+                        🛡️ Admin
+                    </a>
                     <button id="logout-btn" class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
                         Logout
                     </button>
@@ -118,6 +128,21 @@
                 return true;
             },
             
+            // Check if user is admin
+            isAdmin: function() {
+                const userData = this.getUserData();
+                // Check both the stored user data and call the method if available
+                if (userData) {
+                    // Check if role is explicitly ADMIN
+                    if (userData.role === 'ADMIN' || userData.role === 'UserRole.ADMIN') {
+                        return true;
+                    }
+                    // Check the is_admin field
+                    return userData.is_admin === true;
+                }
+                return false;
+            },
+            
             // Clear all stored tokens
             clearTokens: function() {
                 ['access_token', 'refresh_token', 'token_type', 'expires_in', 'user_data', 'token_expires_at'].forEach(key => {
@@ -159,7 +184,7 @@
             }
         });
 
-        // Check authentication on page load
+        // Check authentication and admin status on page load
         document.addEventListener('DOMContentLoaded', function() {
             // Setup logout button
             const logoutBtn = document.getElementById('logout-btn');
@@ -168,6 +193,16 @@
                     e.preventDefault();
                     AuthUtils.logout();
                 });
+            }
+            
+            // Show admin link for admin users only if not already visible
+            const adminLink = document.getElementById('admin-link');
+            if (adminLink && AuthUtils.isAuthenticated() && AuthUtils.isAdmin()) {
+                // Only show if there isn't already a server-rendered admin link
+                const existingAdminLinks = document.querySelectorAll('a[href="/admin/"]:not(#admin-link)');
+                if (existingAdminLinks.length === 0) {
+                    adminLink.classList.remove('hidden');
+                }
             }
         });
     </script>
