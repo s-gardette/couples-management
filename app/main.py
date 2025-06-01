@@ -13,6 +13,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 
 from app.config import settings
 from app.database import get_db
+from app.core.logging import setup_logging
 from app.core.routers import health
 from app.modules.auth.routers import auth_router, users_router
 from app.modules.auth.routers.admin import router as admin_router
@@ -31,28 +32,39 @@ from app.modules.live.routers import live_router
 from app.modules.expenses.services import HouseholdService
 from app.modules.expenses.models.user_household import UserHousehold
 
+# Setup logging first
+log_files = setup_logging()
 logger = logging.getLogger(__name__)
+
+# Log the startup and log file locations
+logger.info("=== Household Management App Starting ===")
+logger.info(f"Log files created: {log_files}")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup
+    logger.info("🚀 Starting Household Management App...")
     print("🚀 Starting Household Management App...")
     
     # Initialize auth system
     db = next(get_db())
     try:
         init_results = await initialize_auth_system(db)
+        logger.info(f"✅ Auth system initialized: {init_results}")
         print(f"✅ Auth system initialized: {init_results}")
     except Exception as e:
+        logger.error(f"❌ Auth system initialization failed: {e}", exc_info=True)
         print(f"❌ Auth system initialization failed: {e}")
     finally:
         db.close()
     
+    logger.info("Application startup complete")
     yield
     
     # Shutdown
+    logger.info("🛑 Shutting down Household Management App...")
     print("🛑 Shutting down Household Management App...")
 
 
@@ -78,6 +90,8 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Setup Jinja2 templates
 templates = Jinja2Templates(directory="templates")
+
+logger.info("FastAPI application configured")
 
 # Include routers with mandatory authentication
 if settings.require_authentication_for_all:

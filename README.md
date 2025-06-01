@@ -10,6 +10,7 @@ A modern, modular household expense tracking application built with FastAPI, HTM
 - **Real-time updates** - HTMX-powered dynamic interface without page reloads
 - **Modern UI** - Beautiful, responsive design with Tailwind CSS
 - **Modular architecture** - Clean, maintainable codebase with separate modules
+- **Comprehensive logging** - Detailed application and access logs for monitoring
 
 ## 🚀 Quick Start
 
@@ -43,12 +44,60 @@ A modern, modular household expense tracking application built with FastAPI, HTM
    ```
 
 4. **Run the application**
+   
+   **Option 1: Using the development script (recommended)**
+   ```bash
+   python run_server.py
+   ```
+   
+   **Option 2: Using uvicorn directly**
    ```bash
    uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
    ```
 
 5. **Open your browser**
    Navigate to `http://localhost:8000`
+
+## 📝 Logging and Monitoring
+
+The application includes comprehensive logging to help with development and debugging:
+
+### Log Files
+
+All logs are saved to the `logs/` directory with daily rotation:
+
+- **`app_YYYYMMDD.log`** - Application logs (general activity, errors, debug info)
+- **`error_YYYYMMDD.log`** - Error-only logs for quick issue identification
+- **`access_YYYYMMDD.log`** - HTTP access logs (requests, responses, timing)
+- **`uvicorn_YYYYMMDD.log`** - Uvicorn server logs
+
+### Viewing Logs
+
+Use the built-in log viewer for real-time monitoring:
+
+```bash
+# View application logs (default)
+python view_logs.py
+
+# View specific log types
+python view_logs.py app      # Application logs
+python view_logs.py error    # Error logs only
+python view_logs.py access   # HTTP access logs
+python view_logs.py uvicorn  # Server logs
+
+# List all available log files
+python view_logs.py list
+
+# Show more lines initially
+python view_logs.py app -n 100
+```
+
+The log viewer will show the last 50 lines by default and then follow new log entries in real-time (like `tail -f`).
+
+### Development Scripts
+
+- **`run_server.py`** - Development server with logging configuration
+- **`view_logs.py`** - Real-time log viewer with filtering options
 
 ## 🧪 Testing
 
@@ -97,6 +146,8 @@ The application follows a modular architecture:
 ```
 app/
 ├── core/           # Shared utilities and base functionality
+│   ├── logging.py  # Logging configuration
+│   └── routers/    # Core API routes
 ├── modules/        # Feature modules
 │   ├── auth/       # Authentication and user management
 │   ├── expenses/   # Expense tracking and management
@@ -139,6 +190,23 @@ uv run alembic revision --autogenerate -m "Description"
 uv run alembic upgrade head
 ```
 
+### Development Workflow
+
+1. **Start the development server:**
+   ```bash
+   python run_server.py
+   ```
+
+2. **Monitor logs in a separate terminal:**
+   ```bash
+   python view_logs.py app
+   ```
+
+3. **Run tests:**
+   ```bash
+   python run_tests.py
+   ```
+
 ## 📚 API Documentation
 
 When the application is running, visit:
@@ -153,6 +221,7 @@ Key environment variables (see `env.example` for full list):
 - `SECRET_KEY` - Application secret key
 - `JWT_SECRET_KEY` - JWT token secret
 - `DEBUG` - Enable debug mode
+- `LOG_LEVEL` - Logging level (DEBUG, INFO, WARNING, ERROR)
 - `CORS_ORIGINS` - Allowed CORS origins
 
 ## 📋 Development Status
@@ -164,6 +233,8 @@ Key environment variables (see `env.example` for full list):
 - [x] Frontend setup with Tailwind CSS and HTMX
 - [x] Configuration management
 - [x] Comprehensive testing infrastructure
+- [x] Comprehensive logging system
+- [x] Development tools and scripts
 - [x] Authentication module (Phase 3)
   - [x] JWT token system with blacklisting
   - [x] Password security and validation
@@ -172,6 +243,7 @@ Key environment variables (see `env.example` for full list):
   - [x] Frontend templates (login, register, profile)
 
 ### 🚧 In Progress
+- [ ] Admin UI module implementation
 - [ ] Expense tracking module (Phase 4)
 
 ### 📅 Planned
