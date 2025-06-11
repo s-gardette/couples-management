@@ -1,0 +1,28 @@
+---
+import AppLayout from '@/layouts/AppLayout.astro';
+import { getAuthenticatedUser } from '@/lib/auth/server-auth-utils';
+import { LogoutHandler } from '@/components/auth/LogoutHandler';
+
+// Check if user is authenticated - if not, redirect to signin
+const user = await getAuthenticatedUser(Astro.cookies);
+if (!user) {
+  return Astro.redirect('/auth/signin');
+}
+---
+
+<AppLayout title="Sign Out - Couples Management" navVariant="auth">
+  <div class="flex items-center justify-center min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+      <div class="text-center">
+        <h2 class="text-3xl font-bold text-foreground">
+          Sign Out
+        </h2>
+        <p class="mt-2 text-sm text-muted-foreground">
+          Thanks for using Couples Management, {user.username}!
+        </p>
+      </div>
+      
+      <LogoutHandler client:load />
+    </div>
+  </div>
+</AppLayout> 

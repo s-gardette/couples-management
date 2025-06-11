@@ -28,6 +28,16 @@ export interface LoginData {
   password: string;
 }
 
+export interface EmailLoginData {
+  email: string;
+  password: string;
+}
+
+export interface UsernameLoginData {
+  username: string;
+  password: string;
+}
+
 class SecureAuthClient {
   private async makeRequest(endpoint: string, options: RequestInit = {}) {
     const url = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
@@ -59,10 +69,23 @@ class SecureAuthClient {
     return result;
   }
 
-  async login(data: LoginData): Promise<{ user: User; message: string }> {
+  async login(data: LoginData | EmailLoginData | UsernameLoginData): Promise<{ user: User; message: string }> {
+    // Convert specific email/username data to the backend format
+    let loginPayload;
+    if ('email_or_username' in data) {
+      // Already in the correct format
+      loginPayload = data;
+    } else if ('email' in data) {
+      // Email login
+      loginPayload = { email_or_username: data.email, password: data.password };
+    } else {
+      // Username login
+      loginPayload = { email_or_username: data.username, password: data.password };
+    }
+
     const response = await this.makeRequest('/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(loginPayload),
     });
 
     const result = await response.json();

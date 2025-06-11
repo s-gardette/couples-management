@@ -1,57 +1,12 @@
 ---
-import BaseLayout from '@/layouts/BaseLayout.astro';
+import AppLayout from '@/layouts/AppLayout.astro';
+import HomePage from '@/components/pages/HomePage';
 import '../styles/globals.css';
 
-// Note: Session checking will be handled client-side with our Better Auth implementation
-// since we're using a custom auth system that connects to the backend API
+// Note: Homepage is public - no authentication required
+// Session checking is implemented in protected pages using server-side utils
 ---
 
-<BaseLayout title="Home - Household Manager">
-	<div class="text-center space-y-8">
-		<!-- Hero Section -->
-		<div class="space-y-4">
-			<h1 class="text-4xl font-bold tracking-tight">
-				Manage Your Household Finances Together
-			</h1>
-			<p class="text-xl text-muted-foreground max-w-2xl mx-auto">
-				Track expenses, manage budgets, and coordinate financial decisions with your household members in one simple app.
-			</p>
-		</div>
-
-		<!-- CTA Buttons -->
-		<div class="flex justify-center space-x-4">
-			<a href="/auth-demo" 
-			   class="inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-base font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
-				Try Authentication Demo
-			</a>
-			<a href="/dashboard" 
-			   class="inline-flex items-center justify-center rounded-md border border-input bg-background px-6 py-3 text-base font-medium hover:bg-accent hover:text-accent-foreground transition-colors">
-				Go to Dashboard
-			</a>
-		</div>
-
-		<!-- Features Section -->
-		<div class="grid md:grid-cols-3 gap-8 mt-16">
-			<div class="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-				<h3 class="text-xl font-semibold mb-2">Track Expenses</h3>
-				<p class="text-muted-foreground">
-					Easily log and categorize household expenses with our intuitive interface.
-				</p>
-			</div>
-			
-			<div class="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-				<h3 class="text-xl font-semibold mb-2">Manage Budgets</h3>
-				<p class="text-muted-foreground">
-					Set and monitor budgets for different categories to stay on track.
-				</p>
-			</div>
-			
-			<div class="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-				<h3 class="text-xl font-semibold mb-2">Coordinate Payments</h3>
-				<p class="text-muted-foreground">
-					Track who owes what and settle payments between household members.
-				</p>
-			</div>
-		</div>
-	</div>
-</BaseLayout>
+<AppLayout title="Home - Couples Management">
+	<HomePage client:load />
+</AppLayout>

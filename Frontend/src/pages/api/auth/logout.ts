@@ -2,7 +2,8 @@ import type { APIRoute } from 'astro';
 
 const BACKEND_URL = import.meta.env.BACKEND_URL || 'http://localhost:8000';
 
-export const POST: APIRoute = async ({ request, cookies }) => {
+// Handle both GET and POST requests for logout
+const logoutHandler = async ({ request, cookies, redirect }: any) => {
   try {
     const accessToken = cookies.get('access_token')?.value;
     
@@ -27,14 +28,21 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     cookies.delete('access_token', { path: '/' });
     cookies.delete('refresh_token', { path: '/' });
 
-    return new Response(JSON.stringify({
-      message: 'Logout successful'
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    // Check if this is a GET request (direct navigation)
+    if (request.method === 'GET') {
+      // Redirect to home page after logout
+      return redirect('/');
+    } else {
+      // POST request - return JSON response
+      return new Response(JSON.stringify({
+        message: 'Logout successful'
+      }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    }
 
   } catch (error) {
     console.error('Logout API error:', error);
@@ -43,13 +51,21 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     cookies.delete('access_token', { path: '/' });
     cookies.delete('refresh_token', { path: '/' });
     
-    return new Response(JSON.stringify({
-      message: 'Logout completed with errors'
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    if (request.method === 'GET') {
+      return redirect('/?logout=error');
+    } else {
+      return new Response(JSON.stringify({
+        message: 'Logout completed with errors'
+      }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    }
   }
-}; 
+};
+
+// Export both GET and POST handlers
+export const GET: APIRoute = logoutHandler;
+export const POST: APIRoute = logoutHandler; 

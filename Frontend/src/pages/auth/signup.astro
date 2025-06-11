@@ -1,0 +1,25 @@
+---
+import AppLayout from '@/layouts/AppLayout.astro';
+import { redirectIfAuthenticated } from '@/lib/auth/server-auth-utils';
+import { SecureSignupForm } from '@/components/auth/SecureSignupForm';
+
+// Redirect to dashboard if already authenticated
+await redirectIfAuthenticated(Astro);
+---
+
+<AppLayout title="Sign Up - Couples Management" navVariant="auth">
+  <div class="flex items-center justify-center min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+      <div class="text-center">
+        <h2 class="text-3xl font-bold text-foreground">
+          Create your account
+        </h2>
+        <p class="mt-2 text-sm text-muted-foreground">
+          Join us to manage your relationship better
+        </p>
+      </div>
+      
+      <SecureSignupForm client:load />
+    </div>
+  </div>
+</AppLayout> 
