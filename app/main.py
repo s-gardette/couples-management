@@ -19,7 +19,7 @@ from app.core.routers import health
 from app.modules.auth.routers import auth_router, users_router, auth_frontend_router
 from app.modules.auth.routers.admin import router as admin_router
 from app.modules.admin.routers import admin_ui_router
-from app.modules.auth.dependencies import require_authentication, get_current_user_optional, get_current_user_from_cookie_or_header
+from app.modules.auth.dependencies import require_authentication, get_current_user_optional, get_current_user_from_cookie_or_header, get_current_user
 from app.modules.auth.utils.startup import initialize_auth_system
 from app.modules.expenses.routers import (
     households_router,
@@ -366,6 +366,145 @@ async def household_join_info_api(
     except Exception as e:
         logger.error(f"Error getting household join info: {e}")
         raise HTTPException(status_code=500, detail="Error getting household information")
+    finally:
+        db.close()
+
+
+# User stats endpoint for home page
+@app.get("/api/user-stats")
+async def get_user_stats(
+    current_user: User = Depends(get_current_user),
+    household_id: str = Query(None, description="Household ID to get stats for")
+):
+    """Get key user statistics for the home page dashboard."""
+    try:
+        db = next(get_db())
+        
+        # Get user's households
+        from app.modules.expenses.models.user_household import UserHousehold
+        from sqlalchemy.orm import joinedload
+        memberships = (
+            db.query(UserHousehold)
+            .options(joinedload(UserHousehold.household))
+            .filter(
+                UserHousehold.user_id == current_user.id,
+                UserHousehold.is_active == True
+            )
+            .all()
+        )
+        
+        if not memberships:
+            # No household found, return empty stats
+            return {
+                "user_owes": 0.0,
+                "user_owed": 0.0,
+                "total_expenses": 0.0,
+                "budget_remaining": 0.0,
+                "household_members": 1,
+                "has_household": False,
+                "available_households": []
+            }
+        
+        # If household_id provided, use it; otherwise use first household
+        target_household_id = None
+        if household_id:
+            try:
+                target_household_uuid = UUID(household_id)
+                # Verify user has access to this household
+                target_membership = next((m for m in memberships if m.household_id == target_household_uuid), None)
+                if target_membership:
+                    target_household_id = target_household_uuid
+            except ValueError:
+                pass
+        
+        if not target_household_id:
+            # Use first household as default
+            target_household_id = memberships[0].household_id
+        
+        # Get available households for switching
+        available_households = []
+        for membership in memberships:
+            available_households.append({
+                "id": str(membership.household_id),
+                "name": membership.household.name if membership.household else "Unknown",
+                "is_current": membership.household_id == target_household_id
+            })
+        
+        # Get analytics service
+        from app.modules.expenses.services.analytics_service import AnalyticsService
+        analytics_service = AnalyticsService(db)
+        
+        # Get balance calculations
+        success, message, balances = await analytics_service.get_balance_calculations(
+            household_id=target_household_id,
+            user_id=current_user.id
+        )
+        
+        if not success:
+            logger.error(f"Failed to get balance calculations: {message}")
+            # Return default values if balance calculation fails
+            return {
+                "user_owes": 0.0,
+                "user_owed": 0.0,
+                "total_expenses": 0.0,
+                "budget_remaining": 0.0,
+                "household_members": len(memberships),
+                "has_household": True,
+                "household_id": str(target_household_id),
+                "available_households": available_households
+            }
+        
+        # Find current user's balance
+        user_balance = None
+        for balance in balances.get("member_balances", []):
+            if balance["user_id"] == str(current_user.id):
+                user_balance = balance
+                break
+        
+        if not user_balance:
+            user_balance = {
+                "owes_amount": 0.0,
+                "owed_amount": 0.0,
+                "net_balance": 0.0
+            }
+        
+        # Get household member count
+        member_count = len(balances.get("member_balances", []))
+        
+        # Get total expenses for the household
+        from app.modules.expenses.models.expense import Expense
+        from sqlalchemy import func
+        total_expenses = (
+            db.query(func.sum(Expense.amount))
+            .filter(
+                Expense.household_id == target_household_id,
+                Expense.is_active == True
+            )
+            .scalar() or 0
+        )
+        
+        return {
+            "user_owes": user_balance["owes_amount"],
+            "user_owed": user_balance["owed_amount"],
+            "total_expenses": float(total_expenses),
+            "budget_remaining": 0.0,  # TODO: Implement budget tracking
+            "household_members": member_count,
+            "has_household": True,
+            "household_id": str(target_household_id),
+            "available_households": available_households
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting user stats: {e}")
+        # Return safe defaults on error
+        return {
+            "user_owes": 0.0,
+            "user_owed": 0.0,
+            "total_expenses": 0.0,
+            "budget_remaining": 0.0,
+            "household_members": 1,
+            "has_household": False
+        }
     finally:
         db.close()
 
