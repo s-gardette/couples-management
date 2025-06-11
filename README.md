@@ -47,7 +47,7 @@ A modern, modular household expense tracking application built with FastAPI, HTM
    
    **Option 1: Using the development script (recommended)**
    ```bash
-   python run_server.py
+   uv run python run_server.py
    ```
    
    **Option 2: Using uvicorn directly**
