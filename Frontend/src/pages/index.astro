@@ -1,0 +1,62 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { getSession } from 'auth-astro/server';
+import '../styles/globals.css';
+
+const session = await getSession(Astro.request);
+
+// Redirect authenticated users to dashboard
+if (session) {
+	return Astro.redirect('/dashboard');
+}
+---
+
+<BaseLayout title="Home - Household Manager">
+	<div class="text-center space-y-8">
+		<!-- Hero Section -->
+		<div class="space-y-4">
+			<h1 class="text-4xl font-bold tracking-tight">
+				Manage Your Household Finances Together
+			</h1>
+			<p class="text-xl text-muted-foreground max-w-2xl mx-auto">
+				Track expenses, manage budgets, and coordinate financial decisions with your household members in one simple app.
+			</p>
+		</div>
+
+		<!-- CTA Buttons -->
+		<div class="flex justify-center space-x-4">
+			<a href="/auth/signup" 
+			   class="inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-base font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+				Get Started Free
+			</a>
+			<a href="/auth/signin" 
+			   class="inline-flex items-center justify-center rounded-md border border-input bg-background px-6 py-3 text-base font-medium hover:bg-accent hover:text-accent-foreground transition-colors">
+				Sign In
+			</a>
+		</div>
+
+		<!-- Features Section -->
+		<div class="grid md:grid-cols-3 gap-8 mt-16">
+			<div class="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+				<h3 class="text-xl font-semibold mb-2">Track Expenses</h3>
+				<p class="text-muted-foreground">
+					Easily log and categorize household expenses with our intuitive interface.
+				</p>
+			</div>
+			
+			<div class="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+				<h3 class="text-xl font-semibold mb-2">Manage Budgets</h3>
+				<p class="text-muted-foreground">
+					Set and monitor budgets for different categories to stay on track.
+				</p>
+			</div>
+			
+			<div class="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+				<h3 class="text-xl font-semibold mb-2">Coordinate Payments</h3>
+				<p class="text-muted-foreground">
+					Track who owes what and settle payments between household members.
+				</p>
+			</div>
+		</div>
+	</div>
+</BaseLayout>

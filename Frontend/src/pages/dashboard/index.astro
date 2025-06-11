@@ -1,0 +1,89 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { getSession } from 'auth-astro/server';
+
+const session = await getSession(Astro.request);
+
+// Redirect if not signed in
+if (!session) {
+  return Astro.redirect('/auth/signin');
+}
+---
+
+<BaseLayout title="Dashboard - Household Manager">
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+      <h1 class="text-3xl font-bold">Dashboard</h1>
+      <div class="flex items-center space-x-4">
+        <span class="text-muted-foreground">
+          Welcome, {session.user?.name || session.user?.email}!
+        </span>
+        <button
+          id="logout-btn"
+          class="bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 rounded-md transition-colors"
+        >
+          Sign Out
+        </button>
+      </div>
+    </div>
+
+    <!-- User Info Card -->
+    <div class="bg-card rounded-lg shadow-sm p-6">
+      <h2 class="text-xl font-semibold mb-4">User Information</h2>
+      <div class="space-y-2">
+        <p><strong>Name:</strong> {session.user?.name || 'Not provided'}</p>
+        <p><strong>Email:</strong> {session.user?.email}</p>
+        <p><strong>User ID:</strong> {session.user?.id}</p>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="grid md:grid-cols-3 gap-6">
+      <a 
+        href="/dashboard/expenses" 
+        class="bg-card rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
+      >
+        <h3 class="text-lg font-semibold mb-2">Expenses</h3>
+        <p class="text-muted-foreground">Track and manage your household expenses</p>
+      </a>
+      
+      <a 
+        href="/dashboard/households" 
+        class="bg-card rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
+      >
+        <h3 class="text-lg font-semibold mb-2">Households</h3>
+        <p class="text-muted-foreground">Manage your household members and settings</p>
+      </a>
+      
+      <a 
+        href="/dashboard/payments" 
+        class="bg-card rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
+      >
+        <h3 class="text-lg font-semibold mb-2">Payments</h3>
+        <p class="text-muted-foreground">Track payments and settlements</p>
+      </a>
+    </div>
+
+    <!-- Recent Activity (placeholder) -->
+    <div class="bg-card rounded-lg shadow-sm p-6">
+      <h2 class="text-xl font-semibold mb-4">Recent Activity</h2>
+      <p class="text-muted-foreground">No recent activity to show.</p>
+    </div>
+  </div>
+
+  <script>
+    import { signOut } from 'auth-astro/client';
+    
+    const logoutBtn = document.getElementById('logout-btn');
+    
+    logoutBtn?.addEventListener('click', async () => {
+      try {
+        await signOut();
+        window.location.href = '/';
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    });
+  </script>
+</BaseLayout> 
