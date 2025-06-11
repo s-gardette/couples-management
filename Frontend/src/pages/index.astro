@@ -1,14 +1,9 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import { getSession } from 'auth-astro/server';
 import '../styles/globals.css';
 
-const session = await getSession(Astro.request);
-
-// Redirect authenticated users to dashboard
-if (session) {
-	return Astro.redirect('/dashboard');
-}
+// Note: Session checking will be handled client-side with our Better Auth implementation
+// since we're using a custom auth system that connects to the backend API
 ---
 
 <BaseLayout title="Home - Household Manager">
@@ -25,13 +20,13 @@ if (session) {
 
 		<!-- CTA Buttons -->
 		<div class="flex justify-center space-x-4">
-			<a href="/signup" 
+			<a href="/auth-demo" 
 			   class="inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-base font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
-				Get Started Free
+				Try Authentication Demo
 			</a>
-			<a href="/signin" 
+			<a href="/dashboard" 
 			   class="inline-flex items-center justify-center rounded-md border border-input bg-background px-6 py-3 text-base font-medium hover:bg-accent hover:text-accent-foreground transition-colors">
-				Sign In
+				Go to Dashboard
 			</a>
 		</div>
 

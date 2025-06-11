@@ -1,88 +1,151 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import { getSession } from 'auth-astro/server';
 
-const session = await getSession(Astro.request);
-
-// Redirect if not signed in
-if (!session) {
-  return Astro.redirect('/auth/signin');
-}
+// Authentication will be handled by React components with our Better Auth system
 ---
 
 <BaseLayout title="Dashboard - Household Manager">
-  <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex justify-between items-center">
-      <h1 class="text-3xl font-bold">Dashboard</h1>
-      <div class="flex items-center space-x-4">
-        <span class="text-muted-foreground">
-          Welcome, {session.user?.name || session.user?.email}!
-        </span>
-        <button
-          id="logout-btn"
-          class="bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 rounded-md transition-colors"
-        >
-          Sign Out
-        </button>
-      </div>
-    </div>
-
-    <!-- User Info Card -->
-    <div class="bg-card rounded-lg shadow-sm p-6">
-      <h2 class="text-xl font-semibold mb-4">User Information</h2>
-      <div class="space-y-2">
-        <p><strong>Name:</strong> {session.user?.name || 'Not provided'}</p>
-        <p><strong>Email:</strong> {session.user?.email}</p>
-        <p><strong>User ID:</strong> {session.user?.id}</p>
-      </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="grid md:grid-cols-3 gap-6">
-      <a 
-        href="/dashboard/expenses" 
-        class="bg-card rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
-      >
-        <h3 class="text-lg font-semibold mb-2">Expenses</h3>
-        <p class="text-muted-foreground">Track and manage your household expenses</p>
-      </a>
-      
-      <a 
-        href="/dashboard/households" 
-        class="bg-card rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
-      >
-        <h3 class="text-lg font-semibold mb-2">Households</h3>
-        <p class="text-muted-foreground">Manage your household members and settings</p>
-      </a>
-      
-      <a 
-        href="/dashboard/payments" 
-        class="bg-card rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
-      >
-        <h3 class="text-lg font-semibold mb-2">Payments</h3>
-        <p class="text-muted-foreground">Track payments and settlements</p>
-      </a>
-    </div>
-
-    <!-- Recent Activity (placeholder) -->
-    <div class="bg-card rounded-lg shadow-sm p-6">
-      <h2 class="text-xl font-semibold mb-4">Recent Activity</h2>
-      <p class="text-muted-foreground">No recent activity to show.</p>
-    </div>
+  <div id="dashboard-app">
+    <!-- React dashboard component will be mounted here -->
   </div>
 
-  <script>
-    import { signOut } from 'auth-astro/client';
+  <!-- Load React and render the protected dashboard -->
+  <script type="module">
+    import React from 'react';
+    import { createRoot } from 'react-dom/client';
     
-    const logoutBtn = document.getElementById('logout-btn');
-    
-    logoutBtn?.addEventListener('click', async () => {
-      try {
-        await signOut();
-        window.location.href = '/';
-      } catch (error) {
-        console.error('Logout error:', error);
+    // Import secure authentication components
+    import('../../lib/secure-auth-context.tsx').then(({ SecureAuthProvider, useAuth }) => {
+      
+      // Dashboard component with authentication
+      function Dashboard() {
+        const { user, loading } = useAuth();
+        
+        if (loading) {
+          return React.createElement('div', { className: 'flex items-center justify-center min-h-screen' },
+            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600' })
+          );
+        }
+        
+        return React.createElement('div', { className: 'space-y-6' },
+          // Header
+          React.createElement('div', { className: 'flex justify-between items-center' },
+            React.createElement('h1', { className: 'text-3xl font-bold' }, 'Dashboard'),
+            React.createElement('div', { className: 'flex items-center space-x-4' },
+              React.createElement('span', { className: 'text-sm text-gray-600' }, `Welcome, ${user?.username}!`),
+              React.createElement('a', { 
+                href: '/auth-demo',
+                className: 'text-sm text-blue-600 hover:text-blue-800'
+              }, 'Auth Demo'),
+              React.createElement('button', {
+                onClick: () => {
+                  // We'll handle logout through the auth context
+                  window.location.href = '/auth-demo';
+                },
+                className: 'text-sm text-red-600 hover:text-red-800'
+              }, 'Sign Out')
+            )
+          ),
+          
+          // User Info Card
+          React.createElement('div', { className: 'bg-white rounded-lg shadow-sm p-6 border' },
+            React.createElement('h2', { className: 'text-xl font-semibold mb-4' }, 'User Information'),
+            React.createElement('div', { className: 'space-y-2' },
+              React.createElement('p', null, 
+                React.createElement('strong', null, 'Name: '),
+                (user?.first_name && user?.last_name) ? `${user.first_name} ${user.last_name}` : user?.username || 'Not provided'
+              ),
+              React.createElement('p', null,
+                React.createElement('strong', null, 'Email: '),
+                user?.email || 'Not provided'
+              ),
+              React.createElement('p', null,
+                React.createElement('strong', null, 'Username: '),
+                user?.username || 'Not provided'
+              ),
+              React.createElement('p', null,
+                React.createElement('strong', null, 'User ID: '),
+                user?.id || 'Not provided'
+              ),
+              React.createElement('p', null,
+                React.createElement('strong', null, 'Email Verified: '),
+                user?.email_verified ? 'Yes' : 'No'
+              )
+            )
+          ),
+          
+          // Quick Actions
+          React.createElement('div', { className: 'grid md:grid-cols-3 gap-6' },
+            React.createElement('a', {
+              href: '/dashboard/expenses',
+              className: 'bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow border block'
+            },
+              React.createElement('h3', { className: 'text-lg font-semibold mb-2' }, 'Expenses'),
+              React.createElement('p', { className: 'text-gray-600' }, 'Track and manage your household expenses')
+            ),
+            React.createElement('a', {
+              href: '/dashboard/households',
+              className: 'bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow border block'
+            },
+              React.createElement('h3', { className: 'text-lg font-semibold mb-2' }, 'Households'),
+              React.createElement('p', { className: 'text-gray-600' }, 'Manage your household members and settings')
+            ),
+            React.createElement('a', {
+              href: '/dashboard/payments',
+              className: 'bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow border block'
+            },
+              React.createElement('h3', { className: 'text-lg font-semibold mb-2' }, 'Payments'),
+              React.createElement('p', { className: 'text-gray-600' }, 'Track payments and settlements')
+            )
+          ),
+          
+          // Recent Activity
+          React.createElement('div', { className: 'bg-white rounded-lg shadow-sm p-6 border' },
+            React.createElement('h2', { className: 'text-xl font-semibold mb-4' }, 'Recent Activity'),
+            React.createElement('p', { className: 'text-gray-600' }, 'No recent activity to show.')
+          )
+        );
+      }
+      
+      // Protected Dashboard with secure authentication
+      function ProtectedDashboard() {
+        const { isAuthenticated, loading } = useAuth();
+        
+        if (loading) {
+          return React.createElement('div', { className: 'flex items-center justify-center min-h-screen' },
+            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600' })
+          );
+        }
+        
+        if (!isAuthenticated) {
+          // Redirect to auth demo if not authenticated
+          window.location.href = '/auth-demo';
+          return React.createElement('div', { className: 'flex items-center justify-center min-h-screen' },
+            React.createElement('div', { className: 'text-center' },
+              React.createElement('p', null, 'Redirecting to login...'),
+              React.createElement('a', { 
+                href: '/auth-demo',
+                className: 'text-blue-600 hover:text-blue-800'
+              }, 'Click here if not redirected')
+            )
+          );
+        }
+        
+        return React.createElement(Dashboard);
+      }
+      
+      // Main app with secure auth provider
+      function App() {
+        return React.createElement(SecureAuthProvider, null,
+          React.createElement(ProtectedDashboard)
+        );
+      }
+      
+      // Mount the dashboard
+      const container = document.getElementById('dashboard-app');
+      if (container) {
+        const root = createRoot(container);
+        root.render(React.createElement(App));
       }
     });
   </script>

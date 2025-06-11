@@ -1,0 +1,61 @@
+---
+// Secure authentication demo using server-side API routes
+import { SecureAuthDemo } from '../components/SecureAuthDemo';
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Secure Authentication Demo - Couples Management</title>
+  </head>
+  <body>
+    <div class="min-h-screen bg-gray-100">
+      <!-- Navigation -->
+      <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex justify-between items-center h-16">
+            <div class="flex items-center">
+              <h1 class="text-xl font-semibold text-gray-800">
+                Couples Management - Secure Authentication
+              </h1>
+            </div>
+            <div class="flex items-center space-x-4">
+              <a href="/dashboard" class="text-sm text-blue-600 hover:text-blue-800">
+                Protected Dashboard
+              </a>
+              <a href="/" class="text-sm text-gray-600 hover:text-gray-800">
+                ← Back to Home
+              </a>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Main Content -->
+      <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div class="px-4 py-6 sm:px-0">
+          <div class="text-center mb-8">
+            <h2 class="text-3xl font-bold text-gray-800 mb-4">
+              🛡️ Secure Authentication System
+            </h2>
+            <p class="text-gray-600 mb-4">
+              Production-ready authentication using server-side API routes and HTTP-only cookies.
+            </p>
+            <div class="inline-flex items-center px-4 py-2 bg-green-100 border border-green-300 rounded-lg text-green-800 text-sm">
+              <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+              </svg>
+              Secure Server-Side Authentication
+            </div>
+          </div>
+
+          <!-- Secure Authentication Demo Component -->
+          <SecureAuthDemo client:load />
+        </div>
+      </main>
+    </div>
+  </body>
+</html> 
