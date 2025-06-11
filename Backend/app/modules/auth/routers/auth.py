@@ -35,8 +35,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 async def register(
-    request: Request,
-    response: Response,
+    register_data: RegisterRequest,
     db: Session = Depends(get_db)
 ):
     """
@@ -44,42 +43,24 @@ async def register(
     
     Creates a new user account with email verification required.
     Supports both form data (web) and JSON (mobile API).
+    
+    Required fields:
+    - email: User email address
+    - username: Unique username (3-50 characters)
+    - password: User password (minimum 8 characters)
+    
+    Optional fields:
+    - first_name: User's first name (max 100 characters)
+    - last_name: User's last name (max 100 characters)
     """
     auth_service = AuthService(db)
 
-    # Check content type to determine how to parse the data
-    content_type = request.headers.get("content-type", "")
-    
-    if "application/json" in content_type:
-        # Handle JSON data (mobile API)
-        body = await request.json()
-        user_email = body.get("email")
-        user_username = body.get("username")
-        user_password = body.get("password")
-        user_first_name = body.get("first_name")
-        user_last_name = body.get("last_name")
-    else:
-        # Handle form data (web form)
-        form_data = await request.form()
-        user_email = form_data.get("email")
-        user_username = form_data.get("username")
-        user_password = form_data.get("password")
-        user_first_name = form_data.get("first_name")
-        user_last_name = form_data.get("last_name")
-
-    # Validate required fields
-    if not all([user_email, user_username, user_password, user_first_name, user_last_name]):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="All fields are required"
-        )
-
     success, message, user_data = await auth_service.register_user(
-        email=user_email,
-        username=user_username,
-        password=user_password,
-        first_name=user_first_name,
-        last_name=user_last_name
+        email=register_data.email,
+        username=register_data.username,
+        password=register_data.password,
+        first_name=register_data.first_name,
+        last_name=register_data.last_name
     )
 
     if not success:

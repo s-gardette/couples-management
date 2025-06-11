@@ -33,18 +33,28 @@ export async function login(email: string, password: string): Promise<ApiRespons
   }
 }
 
-export async function register(username: string, email: string, password: string): Promise<ApiResponse<any>> {
+export async function register(username: string, email: string, password: string, firstName?: string, lastName?: string): Promise<ApiResponse<any>> {
   try {
+    const requestBody: any = {
+      username,
+      email,
+      password,
+    };
+
+    // Only include first_name and last_name if they have values
+    if (firstName && firstName.trim()) {
+      requestBody.first_name = firstName.trim();
+    }
+    if (lastName && lastName.trim()) {
+      requestBody.last_name = lastName.trim();
+    }
+
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        username,
-        email,
-        password,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     const data = await response.json();

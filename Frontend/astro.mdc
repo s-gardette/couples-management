@@ -1,6 +1,6 @@
 ---
 description: 
-globs: *.ts,*.tsx,*.js
+globs: *.ts,*.tsx,*.js,*.astro
 alwaysApply: false
 ---
 ---
