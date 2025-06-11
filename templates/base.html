@@ -219,6 +219,20 @@
                 this.updateNavHouseholdIndicator();
             },
             
+            // Get the user's default household ID from localStorage
+            getDefaultHouseholdId: function() {
+                return localStorage.getItem('default_household_id');
+            },
+            
+            // Set the user's default household ID in localStorage
+            setDefaultHouseholdId: function(householdId) {
+                if (householdId) {
+                    localStorage.setItem('default_household_id', householdId);
+                } else {
+                    localStorage.removeItem('default_household_id');
+                }
+            },
+            
             // Update the navigation household indicator
             updateNavHouseholdIndicator: async function() {
                 const indicator = document.getElementById('nav-household-indicator');
@@ -230,7 +244,14 @@
                     const token = this.getAccessToken();
                     if (!token) return;
                     
-                    const response = await fetch('/api/user-stats', {
+                    // Get default household ID and use it in the request
+                    const defaultHouseholdId = this.getDefaultHouseholdId();
+                    let url = '/api/user-stats';
+                    if (defaultHouseholdId) {
+                        url += `?household_id=${defaultHouseholdId}`;
+                    }
+                    
+                    const response = await fetch(url, {
                         headers: {
                             'Authorization': `Bearer ${token}`
                         }

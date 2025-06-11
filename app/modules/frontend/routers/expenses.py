@@ -237,9 +237,6 @@ async def expense_add_form(
             logger.warning(f"User {current_user.id} has no households, redirecting to onboarding")
             return RedirectResponse(url="/onboarding", status_code=status.HTTP_302_FOUND)
         
-        # Select the first household as default
-        default_household = user_households[0]
-        
         # Prepare household data for the form
         households_data = []
         for household in user_households:
@@ -250,9 +247,10 @@ async def expense_add_form(
                 "member_count": len(household.members) if hasattr(household, 'members') else 0
             })
         
-        logger.info(f"Using default household: {default_household.id} ({default_household.name})")
+        logger.info(f"User has {len(user_households)} households available")
         
         # Show the creation form with household selection embedded
+        # Let the frontend JavaScript handle default household selection from localStorage
         return templates.TemplateResponse(
             request,
             "expenses/expenses/create.html",
@@ -260,8 +258,8 @@ async def expense_add_form(
                 "current_user": current_user,
                 "households": households_data,
                 "show_household_selector": len(user_households) > 1,  # Only show selector if multiple households
-                "default_household_id": str(default_household.id),
-                "default_household": default_household
+                "default_household_id": None,  # Let frontend handle default selection
+                "default_household": None
             }
         )
         

@@ -613,8 +613,8 @@ function expenseCreateForm() {
                 return;
             }
             
-            // Always use the default household provided by the server
-            const defaultHouseholdId = window.expenseCreateData?.default_household_id;
+            // Use default household from localStorage first, then server-provided, then first household
+            const defaultHouseholdId = window.AuthUtils?.getDefaultHouseholdId() || window.expenseCreateData?.default_household_id;
             
             if (defaultHouseholdId) {
                 // Find the matching household by ID

@@ -1,0 +1,1 @@
+The default household should be an info stored in localstorage and I could chnage it from the button and it would affect the whole app every other time I have a default household it should be selected by default. also the household elements should lawys only shows  if the user is in multiple households. 

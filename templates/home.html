@@ -55,6 +55,16 @@
                                     :class="household.is_current ? 'bg-blue-500' : 'bg-gray-300'"
                                 ></div>
                                 <span x-text="household.name"></span>
+                                
+                                <!-- Default indicator -->
+                                <span 
+                                    x-show="isDefaultHousehold(household.id)" 
+                                    class="ml-2 px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full"
+                                >
+                                    Default
+                                </span>
+                                
+                                <!-- Current checkmark -->
                                 <svg 
                                     x-show="household.is_current" 
                                     class="w-4 h-4 ml-auto text-blue-600" 
@@ -252,8 +262,11 @@ function homeStats() {
                 
                 const token = window.AuthUtils.getAccessToken();
                 let url = '/api/user-stats';
-                if (householdId) {
-                    url += `?household_id=${householdId}`;
+                
+                // Use provided householdId, or fall back to default from localStorage
+                const targetHouseholdId = householdId || window.AuthUtils.getDefaultHouseholdId();
+                if (targetHouseholdId) {
+                    url += `?household_id=${targetHouseholdId}`;
                 }
                 
                 const response = await fetch(url, {
@@ -285,6 +298,12 @@ function homeStats() {
         async selectHousehold(householdId) {
             if (householdId && householdId !== this.stats.household_id) {
                 this.selectedHouseholdId = householdId;
+                
+                // Automatically set as default household
+                if (window.AuthUtils) {
+                    window.AuthUtils.setDefaultHouseholdId(householdId);
+                }
+                
                 await this.loadStats(householdId);
                 
                 // Update the is_current flags
@@ -313,6 +332,11 @@ function homeStats() {
                 style: 'currency',
                 currency: 'USD'
             }).format(amount || 0);
+        },
+
+        isDefaultHousehold(householdId) {
+            const defaultId = window.AuthUtils ? window.AuthUtils.getDefaultHouseholdId() : null;
+            return defaultId === householdId;
         }
     };
 }
