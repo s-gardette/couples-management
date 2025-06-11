@@ -1,0 +1,372 @@
+<!-- PARTIAL: dev/dev_bar.html -->
+<!-- Development Bar (only shown in dev mode for admin users) -->
+<div id="dev-bar" class="fixed bottom-0 left-0 right-0 bg-gray-900 text-white text-xs font-mono shadow-lg z-50 transition-transform duration-300" x-data="devBar()" data-partial="dev/dev_bar.html" :class="{ 'translate-y-full': minimized }">
+    <div class="flex items-center justify-between px-4 py-2">
+        <div class="flex items-center space-x-6">
+            <div class="flex items-center space-x-2">
+                <span class="text-yellow-400">🛠️</span>
+                <span class="text-yellow-400 font-semibold">DEV MODE</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span class="text-gray-400">Template:</span>
+                <span class="text-green-400" x-text="currentTemplate"></span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span class="text-gray-400">Route:</span>
+                <span class="text-blue-400" x-text="currentRoute"></span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span class="text-gray-400">User:</span>
+                <span class="text-purple-400" x-text="userInfo"></span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span class="text-gray-400">Time:</span>
+                <span class="text-cyan-400" x-text="currentTime"></span>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <button @click="toggleExpanded()" class="text-gray-400 hover:text-white transition-colors">
+                <span x-show="!expanded">▲ More</span>
+                <span x-show="expanded">▼ Less</span>
+            </button>
+            <button @click="minimizeDevBar()" class="text-gray-400 hover:text-red-400 transition-colors">
+                ↓ Minimize
+            </button>
+        </div>
+    </div>
+    
+    <!-- Expanded Dev Info -->
+    <div x-show="expanded" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 max-h-0" x-transition:enter-end="opacity-100 max-h-96" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 max-h-96" x-transition:leave-end="opacity-0 max-h-0" class="border-t border-gray-700 px-4 py-3 max-h-96 overflow-y-auto">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Browser Info -->
+            <div class="space-y-1">
+                <h4 class="text-yellow-400 font-semibold">Browser Info</h4>
+                <div class="text-gray-300">
+                    <div>Agent: <span class="text-white" x-text="browserInfo.userAgent"></span></div>
+                    <div>Viewport: <span class="text-white" x-text="browserInfo.viewport"></span></div>
+                    <div>Screen: <span class="text-white" x-text="browserInfo.screen"></span></div>
+                </div>
+            </div>
+            
+            <!-- Server Info -->
+            <div class="space-y-1">
+                <h4 class="text-green-400 font-semibold">Server Info</h4>
+                <div class="text-gray-300">
+                    <div>Environment: <span class="text-white">{{ dev_mode and 'Development' or 'Production' }}</span></div>
+                    <div>Template Path: <span class="text-white">{{ template_name if template_name else 'Unknown' }}</span></div>
+                    <div>Request Method: <span class="text-white" x-text="requestInfo.method"></span></div>
+                    <div>Request Time: <span class="text-white">{{ moment().format('YYYY-MM-DD HH:mm:ss') if moment else 'N/A' }}</span></div>
+                </div>
+            </div>
+            
+            <!-- Authentication Info -->
+            <div class="space-y-1">
+                <h4 class="text-purple-400 font-semibold">Auth Info</h4>
+                <div class="text-gray-300">
+                    <div>Token Status: <span class="text-white" x-text="authInfo.tokenStatus"></span></div>
+                    <div>User Role: <span class="text-white" x-text="authInfo.userRole"></span></div>
+                    <div>Admin: <span class="text-white" x-text="authInfo.isAdmin ? 'Yes' : 'No'"></span></div>
+                    <div>Token Expires: <span class="text-white" x-text="authInfo.tokenExpiry"></span></div>
+                </div>
+            </div>
+            
+            <!-- Loaded Partials -->
+            <div class="space-y-1">
+                <h4 class="text-cyan-400 font-semibold">Loaded Partials</h4>
+                <div class="text-gray-300">
+                    <div>Count: <span class="text-white" x-text="partialInfo.count"></span></div>
+                    <div class="max-h-20 overflow-y-auto">
+                        <template x-for="partial in partialInfo.partials" :key="partial">
+                            <div class="text-xs text-cyan-300" x-text="partial"></div>
+                        </template>
+                        <div x-show="partialInfo.partials.length === 0" class="text-xs text-gray-500">No partials detected</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Console Actions -->
+        <div class="mt-4 pt-3 border-t border-gray-700">
+            <div class="flex items-center space-x-4">
+                <span class="text-gray-400">Quick Actions:</span>
+                <button @click="clearStorage()" class="px-2 py-1 bg-red-600 hover:bg-red-700 rounded text-xs transition-colors">
+                    Clear Storage
+                </button>
+                <button @click="showDebugInfo()" class="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs transition-colors">
+                    Console Log
+                </button>
+                <button @click="copyDebugInfo()" class="px-2 py-1 bg-green-600 hover:bg-green-700 rounded text-xs transition-colors">
+                    Copy Debug Info
+                </button>
+                <button @click="scanForPartials()" class="px-2 py-1 bg-cyan-600 hover:bg-cyan-700 rounded text-xs transition-colors">
+                    Rescan Partials
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Floating Dev Button (shown when minimized) -->
+    <div 
+        x-show="minimized" 
+        x-transition:enter="transition ease-out duration-300" 
+        x-transition:enter-start="opacity-0 scale-75" 
+        x-transition:enter-end="opacity-100 scale-100"
+        x-transition:leave="transition ease-in duration-200" 
+        x-transition:leave-start="opacity-100 scale-100" 
+        x-transition:leave-end="opacity-0 scale-75"
+        class="fixed bottom-4 right-4 z-50"
+    >
+        <button 
+            @click="restoreDevBar()" 
+            class="bg-gray-900 hover:bg-gray-800 text-yellow-400 p-2 rounded-full shadow-lg border border-gray-700 transition-all duration-200 hover:scale-110 relative"
+            :title="`Dev Bar - ${currentTemplate} | ${userInfo} | ${authInfo.tokenStatus} | Ctrl+Shift+D to toggle`"
+        >
+            <span class="text-sm">🛠️</span>
+            <!-- Activity indicator -->
+            <div class="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border border-gray-900 animate-pulse"></div>
+        </button>
+    </div>
+</div>
+
+<script>
+// Dev Bar functionality
+function devBar() {
+    return {
+        expanded: false,
+        minimized: false,
+        currentTemplate: '{{ template_name if template_name else "Unknown" }}',
+        currentRoute: window.location.pathname,
+        currentTime: new Date().toLocaleTimeString(),
+        userInfo: '',
+        browserInfo: {
+            userAgent: navigator.userAgent.substring(0, 50) + '...',
+            viewport: window.innerWidth + 'x' + window.innerHeight,
+            screen: screen.width + 'x' + screen.height
+        },
+        requestInfo: {
+            method: '{{ request_method if request_method else "GET" }}'
+        },
+        authInfo: {
+            tokenStatus: 'Unknown',
+            userRole: 'Unknown',
+            isAdmin: false,
+            tokenExpiry: 'Unknown'
+        },
+        partialInfo: {
+            count: 0,
+            partials: []
+        },
+        
+        init() {
+            this.updateUserInfo();
+            this.updateAuthInfo();
+            this.scanForPartials();
+            this.startTimeUpdate();
+            this.setupKeyboardShortcuts();
+        },
+        
+        setupKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                // Ctrl+Shift+D to toggle dev bar
+                if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                    e.preventDefault();
+                    if (this.minimized) {
+                        this.restoreDevBar();
+                    } else {
+                        this.minimizeDevBar();
+                    }
+                }
+                // Ctrl+Shift+E to toggle expanded state (when not minimized)
+                if (e.ctrlKey && e.shiftKey && e.key === 'E' && !this.minimized) {
+                    e.preventDefault();
+                    this.toggleExpanded();
+                }
+            });
+        },
+        
+        updateUserInfo() {
+            const userData = AuthUtils.getUserData();
+            if (userData) {
+                const name = userData.first_name && userData.last_name 
+                    ? `${userData.first_name} ${userData.last_name}` 
+                    : userData.username || userData.email || 'Unknown';
+                this.userInfo = `${name} (${userData.role || 'USER'})`;
+            } else {
+                this.userInfo = 'Not authenticated';
+            }
+        },
+        
+        updateAuthInfo() {
+            const token = AuthUtils.getAccessToken();
+            const userData = AuthUtils.getUserData();
+            
+            // Check token status
+            if (token) {
+                // Check if token is expired
+                const expiresAt = localStorage.getItem('token_expires_at') || sessionStorage.getItem('token_expires_at');
+                if (expiresAt) {
+                    const expiryDate = new Date(expiresAt);
+                    const now = new Date();
+                    this.authInfo.tokenStatus = now > expiryDate ? 'Expired' : 'Valid';
+                    this.authInfo.tokenExpiry = expiryDate.toLocaleString();
+                } else {
+                    this.authInfo.tokenStatus = 'Valid (no expiry data)';
+                    this.authInfo.tokenExpiry = 'Unknown';
+                }
+            } else {
+                this.authInfo.tokenStatus = 'Missing';
+                this.authInfo.tokenExpiry = 'N/A';
+            }
+            
+            // Check admin status
+            this.authInfo.isAdmin = AuthUtils.isAdmin();
+            
+            // Get user role
+            if (userData) {
+                this.authInfo.userRole = userData.role || 'USER';
+            } else {
+                this.authInfo.userRole = 'Not authenticated';
+            }
+        },
+        
+        scanForPartials() {
+            const partials = [];
+            
+            // Method 1: Look for data attributes marking partials
+            const partialElements = document.querySelectorAll('[data-partial]');
+            partialElements.forEach(el => {
+                const partialName = el.getAttribute('data-partial');
+                if (partialName && !partials.includes(partialName)) {
+                    partials.push(partialName);
+                }
+            });
+            
+            // Method 2: Look for HTML comments indicating partials
+            const walker = document.createTreeWalker(
+                document.body,
+                NodeFilter.SHOW_COMMENT,
+                null,
+                false
+            );
+            
+            let comment;
+            while (comment = walker.nextNode()) {
+                const text = comment.nodeValue.trim();
+                // Look for comments like <!-- PARTIAL: partial_name.html -->
+                const partialMatch = text.match(/^PARTIAL:\s*(.+?)$/);
+                if (partialMatch) {
+                    const partialName = partialMatch[1];
+                    if (!partials.includes(partialName)) {
+                        partials.push(partialName);
+                    }
+                }
+            }
+            
+            // Method 3: Look for Alpine.js components that might be partials
+            const alpineElements = document.querySelectorAll('[x-data]');
+            alpineElements.forEach(el => {
+                const xData = el.getAttribute('x-data');
+                if (xData && el.hasAttribute('data-component')) {
+                    const componentName = el.getAttribute('data-component');
+                    if (componentName && !partials.includes(componentName)) {
+                        partials.push(`component: ${componentName}`);
+                    }
+                }
+            });
+            
+            // Method 4: Check for specific partial containers
+            const commonPartials = [
+                { selector: '#dev-bar', name: 'dev/dev_bar.html' },
+                { selector: 'nav[role="navigation"]', name: 'navigation.html' },
+                { selector: '.sidebar', name: 'sidebar.html' },
+                { selector: '.header', name: 'header.html' },
+                { selector: '.footer', name: 'footer.html' },
+                { selector: '[data-modal]', name: 'modal.html' }
+            ];
+            
+            commonPartials.forEach(({ selector, name }) => {
+                if (document.querySelector(selector) && !partials.includes(name)) {
+                    partials.push(name);
+                }
+            });
+            
+            // Sort partials alphabetically
+            partials.sort();
+            
+            this.partialInfo.partials = partials;
+            this.partialInfo.count = partials.length;
+        },
+        
+        startTimeUpdate() {
+            setInterval(() => {
+                this.currentTime = new Date().toLocaleTimeString();
+                // Also refresh auth info every 10 seconds to catch token changes
+                if (Date.now() % 10000 < 1000) {
+                    this.updateAuthInfo();
+                    this.updateUserInfo();
+                }
+            }, 1000);
+        },
+        
+        toggleExpanded() {
+            this.expanded = !this.expanded;
+            // Update body class for spacing
+            if (this.expanded) {
+                document.body.classList.add('dev-bar-expanded');
+            } else {
+                document.body.classList.remove('dev-bar-expanded');
+            }
+        },
+        
+        minimizeDevBar() {
+            this.minimized = true;
+            this.expanded = false;
+            document.body.classList.remove('dev-bar-visible', 'dev-bar-expanded');
+        },
+        
+        restoreDevBar() {
+            this.minimized = false;
+            document.body.classList.add('dev-bar-visible');
+        },
+        
+        clearStorage() {
+            if (confirm('Clear all localStorage and sessionStorage? This will log you out.')) {
+                localStorage.clear();
+                sessionStorage.clear();
+                location.reload();
+            }
+        },
+        
+        showDebugInfo() {
+            const debugInfo = {
+                template: this.currentTemplate,
+                route: this.currentRoute,
+                user: this.userInfo,
+                auth: this.authInfo,
+                browser: this.browserInfo,
+                partials: this.partialInfo,
+                timestamp: new Date().toISOString()
+            };
+            console.log('Debug Info:', debugInfo);
+        },
+        
+        copyDebugInfo() {
+            const debugInfo = {
+                template: this.currentTemplate,
+                route: this.currentRoute,
+                user: this.userInfo,
+                auth: this.authInfo,
+                browser: this.browserInfo,
+                partials: this.partialInfo,
+                timestamp: new Date().toISOString()
+            };
+            
+            navigator.clipboard.writeText(JSON.stringify(debugInfo, null, 2)).then(() => {
+                alert('Debug info copied to clipboard!');
+            }).catch(() => {
+                alert('Failed to copy debug info');
+            });
+        }
+    }
+}
+</script>

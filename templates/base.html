@@ -11,6 +11,39 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
     
+    <!-- Dev Bar CSS -->
+    {% if dev_mode %}
+    <style>
+        /* Add bottom padding when dev bar is visible */
+        body.dev-bar-visible {
+            padding-bottom: 40px;
+        }
+        body.dev-bar-visible.dev-bar-expanded {
+            padding-bottom: 200px;
+        }
+        
+        /* Smooth transitions for dev bar */
+        #dev-bar {
+            transition: all 0.3s ease;
+        }
+        
+        /* Dev bar scrollbar styling */
+        #dev-bar .overflow-y-auto::-webkit-scrollbar {
+            width: 4px;
+        }
+        #dev-bar .overflow-y-auto::-webkit-scrollbar-track {
+            background: #374151;
+        }
+        #dev-bar .overflow-y-auto::-webkit-scrollbar-thumb {
+            background: #6B7280;
+            border-radius: 2px;
+        }
+        #dev-bar .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+            background: #9CA3AF;
+        }
+    </style>
+    {% endif %}
+    
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     
@@ -83,6 +116,10 @@
             </div>
         </div>
     </footer>
+
+    {% if dev_mode %}
+      {% include "partials/dev/dev_bar.html" %}
+    {% endif %}
 
     <!-- Global Authentication Script -->
     <script>
@@ -184,6 +221,8 @@
             }
         });
 
+
+
         // Check authentication and admin status on page load
         document.addEventListener('DOMContentLoaded', function() {
             // Setup logout button
@@ -203,6 +242,13 @@
                 if (existingAdminLinks.length === 0) {
                     adminLink.classList.remove('hidden');
                 }
+            }
+            
+            // Show dev bar if in dev mode and user is admin
+            const devBar = document.getElementById('dev-bar');
+            if (devBar && AuthUtils.isAuthenticated() && AuthUtils.isAdmin()) {
+                devBar.classList.remove('hidden');
+                document.body.classList.add('dev-bar-visible');
             }
         });
     </script>
