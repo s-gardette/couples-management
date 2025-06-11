@@ -33,7 +33,7 @@
                 </div>
                 <div class="ml-4">
                     <div class="text-sm font-medium text-gray-500">Total Households</div>
-                    <div class="text-2xl font-semibold text-gray-900">0</div>
+                    <div class="text-2xl font-semibold text-gray-900">{{ stats.total_households }}</div>
                 </div>
             </div>
         </div>
@@ -49,7 +49,7 @@
                 </div>
                 <div class="ml-4">
                     <div class="text-sm font-medium text-gray-500">Active Members</div>
-                    <div class="text-2xl font-semibold text-gray-900">0</div>
+                    <div class="text-2xl font-semibold text-gray-900">{{ stats.active_members }}</div>
                 </div>
             </div>
         </div>
@@ -65,7 +65,7 @@
                 </div>
                 <div class="ml-4">
                     <div class="text-sm font-medium text-gray-500">Avg Members/House</div>
-                    <div class="text-2xl font-semibold text-gray-900">0</div>
+                    <div class="text-2xl font-semibold text-gray-900">{{ stats.avg_members }}</div>
                 </div>
             </div>
         </div>
@@ -81,7 +81,7 @@
                 </div>
                 <div class="ml-4">
                     <div class="text-sm font-medium text-gray-500">Total Expenses</div>
-                    <div class="text-2xl font-semibold text-gray-900">$0</div>
+                    <div class="text-2xl font-semibold text-gray-900">${{ "{:,.2f}".format(stats.total_expenses) }}</div>
                 </div>
             </div>
         </div>
@@ -89,18 +89,18 @@
 
     <!-- Filters and Search -->
     <div class="bg-white rounded-lg border border-gray-200 p-6">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Search Households</label>
-                <input type="text" placeholder="Household name..." 
+                <input type="text" name="search" value="{{ filters.search }}" placeholder="Household name..." 
                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <select name="status_filter" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <option value="">All Status</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
+                    <option value="active" {% if filters.status_filter == "active" %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if filters.status_filter == "inactive" %}selected{% endif %}>Inactive</option>
                 </select>
             </div>
             <div>
@@ -112,12 +112,15 @@
                     <option value="3+">3+ Members</option>
                 </select>
             </div>
-            <div class="flex items-end">
-                <button class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium">
+            <div class="flex items-end space-x-2">
+                <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
                     Apply Filters
                 </button>
+                <a href="/admin/households" class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium">
+                    Clear
+                </a>
             </div>
-        </div>
+        </form>
     </div>
 
     <!-- Households Table -->
@@ -139,24 +142,146 @@
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                    <!-- No households yet -->
-                    <tr>
-                        <td colspan="6" class="px-6 py-12 text-center">
-                            <div class="flex flex-col items-center">
-                                <svg class="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-                                </svg>
-                                <h3 class="text-lg font-medium text-gray-900 mb-2">No households found</h3>
-                                <p class="text-gray-500 mb-4">Get started by creating the first household.</p>
-                                <button class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
-                                    Create Household
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
+                    {% if households %}
+                        {% for household in households %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10">
+                                        <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                                            <span class="text-indigo-800 font-medium text-sm">
+                                                {{ household.name[:2].upper() }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">{{ household.name }}</div>
+                                        <div class="text-sm text-gray-500">{{ household.description or "No description" }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ household.member_count }} members</div>
+                                <div class="text-sm text-gray-500">
+                                    {% for member in household.members[:3] %}
+                                        {{ member.username }}{% if not loop.last %}, {% endif %}
+                                    {% endfor %}
+                                    {% if household.members|length > 3 %}
+                                        <span class="text-gray-400">+{{ household.members|length - 3 }} more</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if household.is_active %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        Active
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        Inactive
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ household.created_at_display }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                ${{ "{:,.2f}".format(household.total_expenses) }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <div class="flex space-x-2">
+                                    <a href="/admin/households/{{ household.id }}" class="text-indigo-600 hover:text-indigo-900">View</a>
+                                    <a href="/admin/households/{{ household.id }}/edit" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                                    <button class="text-red-600 hover:text-red-900">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <!-- No households yet -->
+                        <tr>
+                            <td colspan="6" class="px-6 py-12 text-center">
+                                <div class="flex flex-col items-center">
+                                    <svg class="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                                    </svg>
+                                    <h3 class="text-lg font-medium text-gray-900 mb-2">No households found</h3>
+                                    <p class="text-gray-500 mb-4">{% if filters.search %}No households match your search criteria.{% else %}Get started by creating the first household.{% endif %}</p>
+                                    {% if not filters.search %}
+                                    <button class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                                        Create Household
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
     </div>
+
+    <!-- Pagination -->
+    {% if pagination.total_pages > 1 %}
+    <div class="bg-white px-6 py-3 border-t border-gray-200 rounded-b-lg">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <p class="text-sm text-gray-700">
+                    Showing 
+                    <span class="font-medium">{{ ((pagination.page - 1) * pagination.per_page) + 1 }}</span>
+                    to 
+                    <span class="font-medium">{{ pagination.page * pagination.per_page if pagination.page * pagination.per_page <= pagination.total else pagination.total }}</span>
+                    of 
+                    <span class="font-medium">{{ pagination.total }}</span>
+                    households
+                </p>
+            </div>
+            <div class="flex space-x-2">
+                {% if pagination.has_previous %}
+                    <a href="?page={{ pagination.page - 1 }}{% if filters.search %}&search={{ filters.search }}{% endif %}{% if filters.status_filter %}&status_filter={{ filters.status_filter }}{% endif %}" 
+                       class="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md">
+                        Previous
+                    </a>
+                {% endif %}
+                
+                <!-- Page numbers -->
+                {% set start_page = [1, pagination.page - 2]|max %}
+                {% set end_page = [pagination.total_pages, pagination.page + 2]|min %}
+                
+                {% if start_page > 1 %}
+                    <a href="?page=1{% if filters.search %}&search={{ filters.search }}{% endif %}{% if filters.status_filter %}&status_filter={{ filters.status_filter }}{% endif %}" 
+                       class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 relative inline-flex items-center px-3 py-2 text-sm font-medium rounded-md">1</a>
+                    {% if start_page > 2 %}
+                        <span class="bg-white border border-gray-300 text-gray-500 relative inline-flex items-center px-3 py-2 text-sm font-medium rounded-md">...</span>
+                    {% endif %}
+                {% endif %}
+                
+                {% for page_num in range(start_page, end_page + 1) %}
+                    {% if page_num == pagination.page %}
+                        <span class="bg-indigo-600 border border-indigo-600 text-white relative inline-flex items-center px-3 py-2 text-sm font-medium rounded-md">{{ page_num }}</span>
+                    {% else %}
+                        <a href="?page={{ page_num }}{% if filters.search %}&search={{ filters.search }}{% endif %}{% if filters.status_filter %}&status_filter={{ filters.status_filter }}{% endif %}" 
+                           class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 relative inline-flex items-center px-3 py-2 text-sm font-medium rounded-md">{{ page_num }}</a>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if end_page < pagination.total_pages %}
+                    {% if end_page < pagination.total_pages - 1 %}
+                        <span class="bg-white border border-gray-300 text-gray-500 relative inline-flex items-center px-3 py-2 text-sm font-medium rounded-md">...</span>
+                    {% endif %}
+                    <a href="?page={{ pagination.total_pages }}{% if filters.search %}&search={{ filters.search }}{% endif %}{% if filters.status_filter %}&status_filter={{ filters.status_filter }}{% endif %}" 
+                       class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 relative inline-flex items-center px-3 py-2 text-sm font-medium rounded-md">{{ pagination.total_pages }}</a>
+                {% endif %}
+                
+                {% if pagination.has_next %}
+                    <a href="?page={{ pagination.page + 1 }}{% if filters.search %}&search={{ filters.search }}{% endif %}{% if filters.status_filter %}&status_filter={{ filters.status_filter }}{% endif %}" 
+                       class="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md">
+                        Next
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %} 

@@ -380,15 +380,18 @@ async def get_user_stats(
     try:
         db = next(get_db())
         
-        # Get user's households
+        # Get user's households (only active households)
         from app.modules.expenses.models.user_household import UserHousehold
+        from app.modules.expenses.models.household import Household
         from sqlalchemy.orm import joinedload
         memberships = (
             db.query(UserHousehold)
             .options(joinedload(UserHousehold.household))
+            .join(Household, UserHousehold.household_id == Household.id)
             .filter(
                 UserHousehold.user_id == current_user.id,
-                UserHousehold.is_active == True
+                UserHousehold.is_active == True,
+                Household.is_active == True  # Only active households
             )
             .all()
         )

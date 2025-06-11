@@ -461,22 +461,162 @@ async def toggle_user_status(
 @router.get("/households", response_class=HTMLResponse)
 async def admin_households(
     request: Request,
-    admin_user: User = Depends(require_admin_auth)
+    admin_user: User = Depends(require_admin_auth),
+    db: Session = Depends(get_db),
+    search: Optional[str] = Query(None),
+    status_filter: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100)
 ):
     """
     Household management interface.
     """
+    from app.modules.expenses.models.household import Household
+    from app.modules.expenses.models.user_household import UserHousehold
+    from app.modules.expenses.models.expense import Expense
+    from sqlalchemy.orm import joinedload
+    from sqlalchemy import desc, or_, func
+    from datetime import date
+    from decimal import Decimal
+    
     logger.info(f"Admin households page accessed by {admin_user.email}")
     
-    return templates.TemplateResponse(
-        request,
-        "admin/households/list.html",
-        {
-            "current_user": admin_user,
-            "page_title": "Household Management",
-            "admin_section": "households"
-        }
-    )
+    try:
+        # Build base query for all households (admin can see all)
+        query = (
+            db.query(Household)
+            .options(joinedload(Household.members).joinedload(UserHousehold.user))
+        )
+        
+        # Apply search filter
+        if search:
+            query = query.filter(
+                or_(
+                    Household.name.ilike(f"%{search}%"),
+                    Household.description.ilike(f"%{search}%")
+                )
+            )
+        
+        # Apply status filter
+        if status_filter == "inactive":
+            query = query.filter(Household.is_active == False)
+        elif status_filter == "active":
+            query = query.filter(Household.is_active == True)
+        # If no status filter, show all (both active and inactive)
+        
+        # Get total count for pagination
+        total_households = query.count()
+        
+        # Apply pagination and sorting
+        households = (
+            query.order_by(desc(Household.created_at))
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
+        
+        # Calculate overall statistics (all households for admin view)
+        all_households = db.query(Household).all()
+        total_members = db.query(UserHousehold).filter(UserHousehold.is_active == True).count()
+        total_active_households = db.query(Household).filter(Household.is_active == True).count()
+        avg_members = total_members / total_active_households if total_active_households else 0
+        
+        # Calculate total expenses across all households
+        total_expenses_amount = (
+            db.query(func.sum(Expense.amount))
+            .filter(Expense.is_active == True)
+            .scalar() or Decimal('0')
+        )
+        
+        # Format households for template
+        formatted_households = []
+        for household in households:
+            # Get expense total for this household
+            household_expenses = (
+                db.query(func.sum(Expense.amount))
+                .filter(
+                    Expense.household_id == household.id,
+                    Expense.is_active == True
+                )
+                .scalar() or Decimal('0')
+            )
+            
+            formatted_household = {
+                "id": str(household.id),
+                "name": household.name,
+                "description": household.description or "",
+                "member_count": len([m for m in household.members if m.is_active]),
+                "total_expenses": float(household_expenses),
+                "created_at": household.created_at.strftime('%Y-%m-%d') if household.created_at else "",
+                "created_at_display": household.created_at.strftime('%b %d, %Y') if household.created_at else "",
+                "is_active": household.is_active,
+                "invite_code": household.invite_code,
+                "members": [
+                    {
+                        "user_id": str(member.user.id),
+                        "username": member.user.username,
+                        "email": member.user.email,
+                        "role": member.role.value if member.role else "member",
+                        "nickname": member.nickname,
+                        "joined_at": member.joined_at.strftime('%Y-%m-%d') if member.joined_at else ""
+                    }
+                    for member in household.members if member.is_active and member.user
+                ]
+            }
+            formatted_households.append(formatted_household)
+        
+        # Calculate pagination
+        total_pages = (total_households + per_page - 1) // per_page
+        
+        return templates.TemplateResponse(
+            request,
+            "admin/households/list.html",
+            {
+                "current_user": admin_user,
+                "page_title": "Household Management",
+                "admin_section": "households",
+                "households": formatted_households,
+                "stats": {
+                    "total_households": len(all_households),
+                    "active_members": total_members,
+                    "avg_members": round(avg_members, 1),
+                    "total_expenses": float(total_expenses_amount)
+                },
+                "pagination": {
+                    "page": page,
+                    "per_page": per_page,
+                    "total": total_households,
+                    "total_pages": total_pages,
+                    "has_previous": page > 1,
+                    "has_next": page < total_pages
+                },
+                "filters": {
+                    "search": search or "",
+                    "status_filter": status_filter or ""
+                }
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Error loading admin households: {e}", exc_info=True)
+        
+        return templates.TemplateResponse(
+            request,
+            "admin/households/list.html",
+            {
+                "current_user": admin_user,
+                "page_title": "Household Management",
+                "admin_section": "households",
+                "households": [],
+                "stats": {
+                    "total_households": 0,
+                    "active_members": 0,
+                    "avg_members": 0,
+                    "total_expenses": 0
+                },
+                "error": str(e)
+            }
+        )
 
 
 @router.get("/expenses", response_class=HTMLResponse)
