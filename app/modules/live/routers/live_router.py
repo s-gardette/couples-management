@@ -10,8 +10,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Form
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
 
+from sqlalchemy.orm import Session
+
+from app.database import get_db
 from app.modules.auth.dependencies import get_current_user_from_cookie_or_header
 from app.modules.live.services.live_service import LiveService
 from app.modules.live.services.notification_service import NotificationService
@@ -19,15 +21,15 @@ from app.modules.live.utils.live_helpers import LiveHelpers
 
 logger = logging.getLogger(__name__)
 
-# Initialize templates
-templates = Jinja2Templates(directory="templates")
+# Setup Enhanced Jinja2 templates with automatic global context
+from app.core.templates import templates
 
 # Initialize router
 router = APIRouter(prefix="/api/live", tags=["live"])
 
 # Initialize services
-def get_live_service() -> LiveService:
-    return LiveService()
+def get_live_service(db: Session = Depends(get_db)) -> LiveService:
+    return LiveService(db)
 
 def get_notification_service() -> NotificationService:
     return NotificationService()
@@ -39,18 +41,41 @@ async def get_live_expenses(
     search: str = "",
     category: str = "",
     date_range: str = "",
-    min_amount: Optional[float] = None,
-    max_amount: Optional[float] = None,
+    min_amount: Optional[str] = None,
+    max_amount: Optional[str] = None,
     payment_status: str = "",
     created_by: str = "",
     sort_by: str = "date_desc",
     page: int = 1,
     per_page: int = 20,
     view_mode: str = "cards",
-    current_user = Depends(get_current_user_from_cookie_or_header)
+    current_user = Depends(get_current_user_from_cookie_or_header),
+    live_service: LiveService = Depends(get_live_service)
 ):
     """Get live expenses with HTML response for HTMX."""
     try:
+        # Check authentication
+        if not current_user:
+            return HTMLResponse(
+                content="<div class='text-red-500 p-4'>Authentication required</div>",
+                status_code=401
+            )
+        # Parse min_amount and max_amount, handling empty strings
+        parsed_min_amount = None
+        parsed_max_amount = None
+        
+        if min_amount and min_amount.strip():
+            try:
+                parsed_min_amount = float(min_amount)
+            except ValueError:
+                logger.warning(f"Invalid min_amount value: {min_amount}")
+                
+        if max_amount and max_amount.strip():
+            try:
+                parsed_max_amount = float(max_amount)
+            except ValueError:
+                logger.warning(f"Invalid max_amount value: {max_amount}")
+        
         # Build filters for live service
         filters = {}
         if search:
@@ -59,18 +84,17 @@ async def get_live_expenses(
             filters['category'] = category
         if date_range:
             filters['date_range'] = date_range
-        if min_amount is not None:
-            filters['min_amount'] = min_amount
-        if max_amount is not None:
-            filters['max_amount'] = max_amount
+        if parsed_min_amount is not None:
+            filters['min_amount'] = parsed_min_amount
+        if parsed_max_amount is not None:
+            filters['max_amount'] = parsed_max_amount
         if payment_status:
             filters['payment_status'] = payment_status
         if created_by:
             filters['created_by'] = created_by
 
         # Get live expense data
-        live_service_instance = get_live_service()
-        expense_data = await live_service_instance.get_live_expenses(
+        expense_data = await live_service.get_live_expenses(
             user_id=current_user.id,
             household_id=household_id,
             filters=filters,
@@ -121,6 +145,7 @@ async def get_live_expenses(
 
         # Set custom headers for HTMX
         response = templates.TemplateResponse(
+            request,
             "partials/expenses/live_list.html", 
             context
         )
@@ -145,6 +170,12 @@ async def get_live_balances(
 ):
     """Get live balance data with real-time calculations."""
     try:
+        # Check authentication
+        if not current_user:
+            raise HTTPException(
+                status_code=401,
+                detail="Authentication required"
+            )
         result = await live_service.get_live_balances(
             household_id=household_id,
             current_user_id=current_user.id
@@ -169,6 +200,18 @@ async def get_live_stats(
 ):
     """Get live summary statistics for the household."""
     try:
+        # Check authentication
+        if not current_user:
+            return LiveHelpers.format_live_response(
+                data={
+                    'total_expenses': 0,
+                    'total_amount': 0,
+                    'this_month_amount': 0,
+                    'this_month_count': 0
+                },
+                success=False,
+                message="Authentication required"
+            )
         result = await live_service.get_live_stats(
             household_id=household_id,
             current_user_id=current_user.id
@@ -193,6 +236,12 @@ async def get_live_expense_details(
 ):
     """Get live expense details with real-time data."""
     try:
+        # Check authentication
+        if not current_user:
+            raise HTTPException(
+                status_code=401,
+                detail="Authentication required"
+            )
         result = await live_service.get_live_expense_details(
             expense_id=expense_id,
             current_user_id=current_user.id
@@ -242,6 +291,12 @@ async def get_notifications(
 ):
     """Get pending notifications for the current user."""
     try:
+        # Check authentication
+        if not current_user:
+            raise HTTPException(
+                status_code=401,
+                detail="Authentication required"
+            )
         notifications = notification_service.get_user_notifications(
             user_id=str(current_user.id)
         )
@@ -341,6 +396,12 @@ async def create_toast_notification(
 ):
     """Create a new notification."""
     try:
+        # Check authentication
+        if not current_user:
+            raise HTTPException(
+                status_code=401,
+                detail="Authentication required"
+            )
         notification_id = notification_service.create_toast(
             message=message,
             type=type,

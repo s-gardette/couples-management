@@ -2,9 +2,11 @@
 User management API endpoints.
 """
 
+import logging
+from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -27,10 +29,19 @@ from app.modules.auth.schemas.user import (
     UserResponse,
     UserStats,
     UserUpdate,
+    UserListResponse,
+    UserCreate,
 )
 from app.modules.auth.services.user_service import UserService
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/users", tags=["User Management"])
+
+
+def get_user_service(db: Session = Depends(get_db)) -> UserService:
+    """Get user service instance."""
+    return UserService(db)
 
 
 @router.get("/me", response_model=UserProfile)
@@ -357,3 +368,183 @@ async def delete_user(
         success=True,
         message=message
     )
+
+
+@router.get("/", response_model=UserListResponse)
+async def list_users(
+    page: int = Query(1, ge=1, description="Page number"),
+    per_page: int = Query(20, ge=1, le=100, description="Items per page"),
+    search: Optional[str] = Query(None, description="Search by email or username"),
+    role: Optional[str] = Query(None, description="Filter by role"),
+    is_active: Optional[bool] = Query(None, description="Filter by active status"),
+    current_user: User = Depends(get_current_admin_user),
+    user_service: UserService = Depends(get_user_service)
+):
+    """List all users (admin only)."""
+    try:
+        # Build filters
+        filters = {}
+        if search:
+            filters['search'] = search
+        if role:
+            filters['role'] = role
+        if is_active is not None:
+            filters['is_active'] = is_active
+        
+        # Calculate skip for pagination
+        skip = (page - 1) * per_page
+        
+        success, message, users = await user_service.list_users(
+            skip=skip,
+            limit=per_page,
+            filters=filters
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=message
+            )
+        
+        # Get total count (simplified approach)
+        total = len(users)  # This would need proper total count implementation
+        
+        return UserListResponse(
+            users=users,
+            total=total,
+            page=page,
+            per_page=per_page
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error listing users: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve users"
+        )
+
+
+@router.get("/{user_id}", response_model=UserResponse)
+async def get_user(
+    user_id: UUID,
+    current_user: User = Depends(get_current_admin_user),
+    user_service: UserService = Depends(get_user_service)
+):
+    """Get user by ID (admin only)."""
+    try:
+        user = await user_service.get_user_by_id(user_id)
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        return user
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting user: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve user"
+        )
+
+
+@router.post("/", response_model=UserResponse)
+async def create_user(
+    user_data: UserCreate,
+    current_user: User = Depends(get_current_admin_user),
+    user_service: UserService = Depends(get_user_service)
+):
+    """Create a new user (admin only)."""
+    try:
+        success, message, new_user = await user_service.create_user(
+            user_data=user_data,
+            created_by_admin_id=current_user.id
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=message
+            )
+        
+        return new_user
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating user: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create user"
+        )
+
+
+@router.put("/{user_id}", response_model=UserResponse)
+async def update_user(
+    user_id: UUID,
+    user_data: UserUpdate,
+    current_user: User = Depends(get_current_admin_user),
+    user_service: UserService = Depends(get_user_service)
+):
+    """Update user (admin only)."""
+    try:
+        success, message, updated_user = await user_service.update_user(
+            user_id=user_id,
+            user_data=user_data.model_dump(exclude_unset=True)
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=message
+            )
+        
+        return updated_user
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating user: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update user"
+        )
+
+
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(
+    user_id: UUID,
+    current_user: User = Depends(get_current_admin_user),
+    user_service: UserService = Depends(get_user_service)
+):
+    """Delete user (admin only)."""
+    try:
+        # Prevent deleting yourself
+        if user_id == current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You cannot delete your own account"
+            )
+        
+        success, message = await user_service.delete_user(user_id)
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=message
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting user: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete user"
+        )

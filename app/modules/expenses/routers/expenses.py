@@ -330,7 +330,7 @@ async def update_expense(
         success, message, expense = await expense_service.update_expense(
             expense_id=expense_id,
             user_id=current_user.id,
-            update_data=expense_data.model_dump(exclude_unset=True),
+            updates=expense_data.model_dump(exclude_unset=True),
             recalculate_splits=recalculate_splits
         )
         

@@ -3,30 +3,99 @@
 {% block title %}Create Expense{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
-    <div class="bg-white shadow rounded-lg">
-        <!-- Expense Creation Form -->
-        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4" x-data="expenseCreateForm()">
-            <div class="sm:flex sm:items-start">
-                <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10">
-                    <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
-                </div>
-                <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                        Add New Expense
-                    </h3>
-                    <div class="mt-2">
-                        <p class="text-sm text-gray-500">
-                            Create a new expense and split it among household members.
-                        </p>
-                    </div>
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <a 
+                href="javascript:history.back()" 
+                class="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
+            >
+                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+                Back
+            </a>
+            <h1 class="text-3xl font-bold text-gray-900">Create Expense</h1>
+        </div>
+        <div class="flex items-center space-x-3">
+            <div class="text-sm text-gray-500">
+                New expense form
+            </div>
+        </div>
+    </div>
 
+    <!-- Main Content -->
+    <div class="max-w-4xl mx-auto">
+        <!-- Main Form -->
+        <div>
+            <div class="bg-white shadow rounded-lg overflow-hidden" x-data="expenseCreateForm()">
+                <!-- Form Header -->
+                <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-blue-50">
+                    <div class="flex items-center space-x-3">
+                        <div class="h-10 w-10 bg-green-100 rounded-lg flex items-center justify-center">
+                            <svg class="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-medium text-gray-900">Add New Expense</h2>
+                            <p class="text-sm text-gray-600">Create a new expense and split it among household members</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Household Selector (if multiple households) -->
+                    <div x-show="userHouseholds.length > 1" class="mt-4 p-3 bg-white/50 rounded-md">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-sm font-medium text-gray-700">Household:</span>
+                            <select 
+                                name="household_id" 
+                                id="household_id"
+                                x-model="form.household_id"
+                                @change="onHouseholdChange()"
+                                required
+                                class="text-sm border-gray-200 rounded-md bg-white text-gray-700 focus:ring-green-500 focus:border-green-500 px-3 py-1"
+                            >
+                                <template x-for="household in userHouseholds" :key="household.id">
+                                    <option :value="household.id" :selected="household.id === form.household_id" x-text="household.name"></option>
+                                </template>
+                            </select>
+                            <span class="text-xs text-gray-500">Switch household if needed</span>
+                        </div>
+                    </div>
+                </div>
+                    
+                    <!-- Debug Error Message -->
+                    {% if error_message %}
+                    <div class="mt-4 rounded-md bg-red-50 p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-red-800">Debug Information</h3>
+                                <div class="mt-2 text-sm text-red-700">
+                                    <p>{{ error_message }}</p>
+                                    {% if debug_user_id %}
+                                    <p>User ID: {{ debug_user_id }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                <!-- Form Content -->
+                <form 
+                    class="px-6 py-6 space-y-8"
+                    @submit.prevent="submitForm()"
+                >
                     <!-- Progress Steps -->
-                    <div class="mt-6">
+                    <div class="mb-8">
                         <nav aria-label="Progress">
-                            <ol class="flex items-center">
+                            <ol class="flex items-center justify-center">
                                 <li class="relative pr-8 sm:pr-20">
                                     <div class="absolute inset-0 flex items-center" aria-hidden="true">
                                         <div class="h-0.5 w-full bg-gray-200"></div>
@@ -50,70 +119,52 @@
                                 </li>
                             </ol>
                         </nav>
-                        <div class="mt-2 text-sm text-gray-600">
-                            <span x-show="currentStep === 1">Basic Information</span>
-                            <span x-show="currentStep === 2">Split & Category</span>
-                            <span x-show="currentStep === 3">Review & Submit</span>
+                        <div class="mt-3 text-center">
+                            <div class="text-sm font-medium text-gray-900">
+                                <span x-show="currentStep === 1">Step 1: Basic Information</span>
+                                <span x-show="currentStep === 2">Step 2: Split & Category</span>
+                                <span x-show="currentStep === 3">Step 3: Review & Submit</span>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">
+                                <span x-show="currentStep === 1">Enter expense details</span>
+                                <span x-show="currentStep === 2">Configure splitting and categorization</span>
+                                <span x-show="currentStep === 3">Review and create expense</span>
+                            </div>
                         </div>
                     </div>
-
-                    <!-- Form -->
-                    <form 
-                        class="mt-6 space-y-6"
-                        @submit.prevent="submitForm()"
-                    >
                         <!-- Step 1: Basic Information -->
                         <div x-show="currentStep === 1" x-transition>
                             <div class="space-y-4">
-                                <!-- Household Selection (if multiple households) -->
-                                <div x-show="userHouseholds.length > 1">
-                                    <label for="household_id" class="block text-sm font-medium text-gray-700">
-                                        Household *
-                                    </label>
-                                    <div class="mt-1">
-                                        <select 
-                                            name="household_id" 
-                                            id="household_id"
-                                            x-model="form.household_id"
-                                            @change="onHouseholdChange()"
-                                            required
-                                            class="shadow-sm focus:ring-green-500 focus:border-green-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                        >
-                                            <option value="">Select a household</option>
-                                            <template x-for="household in userHouseholds" :key="household.id">
-                                                <option :value="household.id" x-text="household.name"></option>
-                                            </template>
-                                        </select>
-                                    </div>
-                                    <p class="mt-1 text-sm text-gray-500">Choose which household this expense belongs to</p>
-                                </div>
-
                                 <div>
-                                    <label for="title" class="block text-sm font-medium text-gray-700">
+                                    <label for="title" class="flex items-center text-sm font-medium text-gray-700 mb-2">
+                                        <svg class="mr-2 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                                        </svg>
                                         Expense Title *
                                     </label>
-                                    <div class="mt-1">
-                                        <input 
-                                            type="text" 
-                                            name="title" 
-                                            id="title" 
-                                            x-model="form.title"
-                                            @input="validateField('title')"
-                                            required
-                                            class="shadow-sm focus:ring-green-500 focus:border-green-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                            placeholder="e.g., Grocery Shopping, Dinner at Restaurant"
-                                        >
-                                        <p x-show="errors.title" x-text="errors.title" class="mt-1 text-sm text-red-600"></p>
-                                    </div>
+                                    <input 
+                                        type="text" 
+                                        name="title" 
+                                        id="title" 
+                                        x-model="form.title"
+                                        @input="validateField('title')"
+                                        required
+                                        class="block w-full px-4 py-3 rounded-lg border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-lg"
+                                        placeholder="e.g., Grocery Shopping, Dinner at Restaurant"
+                                    >
+                                    <div x-show="errors.title" class="mt-2 text-sm text-red-600" x-text="errors.title"></div>
                                 </div>
 
                                 <div>
-                                    <label for="amount" class="block text-sm font-medium text-gray-700">
+                                    <label for="amount" class="flex items-center text-sm font-medium text-gray-700 mb-2">
+                                        <svg class="mr-2 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                                        </svg>
                                         Amount *
                                     </label>
-                                    <div class="mt-1 relative rounded-md shadow-sm">
-                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <span class="text-gray-500 sm:text-sm" x-text="getCurrencySymbol()"></span>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <span class="text-gray-500 text-lg font-medium" x-text="getCurrencySymbol()"></span>
                                         </div>
                                         <input 
                                             type="number" 
@@ -124,14 +175,11 @@
                                             x-model="form.amount"
                                             @input="validateField('amount')"
                                             required
-                                            class="focus:ring-green-500 focus:border-green-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
+                                            class="pl-10 block w-full px-4 py-3 rounded-lg border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 text-lg font-medium"
                                             placeholder="0.00"
                                         >
-                                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                            <span class="text-gray-500 sm:text-sm" x-text="form.currency"></span>
-                                        </div>
                                     </div>
-                                    <p x-show="errors.amount" x-text="errors.amount" class="mt-1 text-sm text-red-600"></p>
+                                    <div x-show="errors.amount" class="mt-2 text-sm text-red-600" x-text="errors.amount"></div>
                                 </div>
 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -425,74 +473,87 @@
                             </div>
                         </div>
 
-                        <!-- Error Messages -->
-                        <div x-show="Object.keys(errors).length > 0" class="rounded-md bg-red-50 p-4">
-                            <div class="flex">
-                                <div class="flex-shrink-0">
-                                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                    <!-- Form Actions -->
+                    <div class="border-t border-gray-200 bg-gray-50 px-6 py-4">
+                        <div class="flex justify-between items-center">
+                            <div class="flex space-x-3">
+                                <button 
+                                    type="button"
+                                    @click="previousStep()"
+                                    x-show="currentStep > 1"
+                                    class="inline-flex items-center px-6 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+                                >
+                                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                                     </svg>
-                                </div>
-                                <div class="ml-3">
-                                    <h3 class="text-sm font-medium text-red-800">
-                                        Please fix the following errors:
-                                    </h3>
-                                    <div class="mt-2 text-sm text-red-700">
-                                        <ul class="list-disc pl-5 space-y-1">
-                                            <template x-for="(error, field) in errors" :key="field">
-                                                <li x-text="error"></li>
-                                            </template>
-                                        </ul>
-                                    </div>
+                                    Previous
+                                </button>
+                                <button 
+                                    type="button"
+                                    onclick="window.history.back()"
+                                    class="inline-flex items-center px-6 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+                                >
+                                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                    Cancel
+                                </button>
+                            </div>
+                            
+                            <div class="flex space-x-3">
+                                <button 
+                                    type="button"
+                                    @click="nextStep()"
+                                    x-show="currentStep < 3"
+                                    :disabled="!canProceed()"
+                                    class="inline-flex items-center px-8 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    Next Step
+                                    <svg class="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                </button>
+                                <button 
+                                    type="submit"
+                                    x-show="currentStep === 3"
+                                    :disabled="isSubmitting || !isValidForSubmission()"
+                                    class="inline-flex items-center px-8 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-show="!isSubmitting">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <svg class="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" x-show="isSubmitting">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span x-show="!isSubmitting">Create Expense</span>
+                                    <span x-show="isSubmitting">Creating...</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Error Messages -->
+                    <div x-show="Object.keys(errors).length > 0" class="px-6 py-4 border-t border-red-200 bg-red-50" style="display: none;">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-red-800">Please fix the following errors:</h3>
+                                <div class="mt-2 text-sm text-red-700">
+                                    <ul class="list-disc pl-5 space-y-1">
+                                        <template x-for="(error, field) in errors" :key="field">
+                                            <li x-text="error"></li>
+                                        </template>
+                                    </ul>
                                 </div>
                             </div>
                         </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Modal Footer -->
-            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button 
-                    type="button"
-                    @click="nextStep()"
-                    x-show="currentStep < 3"
-                    :disabled="!canProceed()"
-                    class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    Next
-                </button>
-                <button 
-                    type="submit"
-                    @click="submitForm()"
-                    x-show="currentStep === 3"
-                    :disabled="isSubmitting || !isValidForSubmission()"
-                    class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    <span x-show="!isSubmitting">Create Expense</span>
-                    <span x-show="isSubmitting" class="flex items-center">
-                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Creating...
-                    </span>
-                </button>
-                <button 
-                    type="button"
-                    @click="previousStep()"
-                    x-show="currentStep > 1"
-                    class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                >
-                    Previous
-                </button>
-                <button 
-                    type="button"
-                    @click="$dispatch('close-modal')"
-                    class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:mt-0 sm:w-auto sm:text-sm"
-                >
-                    Cancel
-                </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -500,6 +561,13 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Pass server data to JavaScript -->
+<script>
+window.expenseCreateData = {
+    households: {{ households | tojson if households else [] }},
+    default_household_id: {{ default_household_id | tojson if default_household_id else 'null' }}
+};
+</script>
 <script>
 function expenseCreateForm() {
     return {
@@ -525,7 +593,53 @@ function expenseCreateForm() {
         errors: {},
         
         init() {
-            this.loadUserHouseholds();
+            // Initialize with server-side data if available
+            const serverHouseholds = window.expenseCreateData?.households || [];
+            if (serverHouseholds.length > 0) {
+                this.userHouseholds = serverHouseholds;
+                this.initializeAfterHouseholdsLoad();
+            } else {
+                this.loadUserHouseholds();
+            }
+        },
+        
+        initializeAfterHouseholdsLoad() {
+            // Auto-select household logic
+            if (this.userHouseholds.length === 0) {
+                this.errors.general = 'You need to create or join a household first';
+                setTimeout(() => {
+                    window.location.href = '/onboarding';
+                }, 2000);
+                return;
+            }
+            
+            // Always use the default household provided by the server
+            const defaultHouseholdId = window.expenseCreateData?.default_household_id;
+            
+            if (defaultHouseholdId) {
+                // Find the matching household by ID
+                let foundHousehold = null;
+                for (const household of this.userHouseholds) {
+                    if (household.id === defaultHouseholdId) {
+                        foundHousehold = household;
+                        break;
+                    }
+                }
+                
+                if (foundHousehold) {
+                    this.form.household_id = foundHousehold.id;
+                } else {
+                    // Fallback to first household if no match found
+                    this.form.household_id = this.userHouseholds[0].id;
+                }
+                this.loadCategories();
+                this.loadHouseholdMembers();
+            } else if (this.userHouseholds.length > 0) {
+                // Fallback to first household if no default provided
+                this.form.household_id = this.userHouseholds[0].id;
+                this.loadCategories();
+                this.loadHouseholdMembers();
+            }
         },
         
         async loadUserHouseholds() {
@@ -537,23 +651,7 @@ function expenseCreateForm() {
                 });
                 const data = await response.json();
                 this.userHouseholds = data || [];
-                
-                // Auto-select household logic
-                if (this.userHouseholds.length === 0) {
-                    this.errors.general = 'You need to create or join a household first';
-                    setTimeout(() => {
-                        window.location.href = '/onboarding';
-                    }, 2000);
-                    return;
-                } else if (this.userHouseholds.length === 1) {
-                    // Auto-select the only household
-                    this.form.household_id = this.userHouseholds[0].id;
-                    this.loadCategories();
-                    this.loadHouseholdMembers();
-                } else {
-                    // Multiple households - user needs to select
-                    // Categories and members will be loaded after household selection
-                }
+                this.initializeAfterHouseholdsLoad();
             } catch (error) {
                 console.error('Error loading user households:', error);
                 this.errors.general = 'Failed to load your households';

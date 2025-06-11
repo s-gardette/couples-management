@@ -1,446 +1,246 @@
-{% extends "base/layouts/app.html" %}
+{% extends "base.html" %}
 
-{% block title %}Profile Settings{% endblock %}
+{% block title %}Profile - {{ current_user.email }}{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8" x-data="profileManager()">
-    <!-- Header -->
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">Profile Settings</h1>
-        <p class="mt-2 text-gray-600">Manage your account information and preferences</p>
+<div class="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
+    <!-- Page Header -->
+    <div class="md:flex md:items-center md:justify-between">
+        <div class="flex-1 min-w-0">
+            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+                Profile
+            </h2>
+            <p class="mt-1 text-sm text-gray-500">
+                Manage your account information and settings
+            </p>
+        </div>
     </div>
 
-    <!-- Profile Information Card -->
-    <div class="bg-white shadow rounded-lg mb-6">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-medium text-gray-900">Profile Information</h2>
-            <p class="text-sm text-gray-500">Update your personal information and profile picture</p>
-        </div>
-        
-        <div class="p-6">
-            <!-- Avatar Section -->
-            <div class="flex items-center space-x-6 mb-6">
-                <div class="relative">
-                    <img class="h-24 w-24 rounded-full object-cover border-4 border-white shadow-lg" 
-                         :src="avatarUrl || '{{ user.avatar_url or url_for('static', path='images/default-avatar.png') }}'" 
-                         :alt="fullName">
-                    <button type="button" 
-                            @click="$refs.avatarInput.click()"
-                            class="absolute bottom-0 right-0 bg-indigo-600 rounded-full p-2 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        </svg>
-                    </button>
-                    <input type="file" 
-                           x-ref="avatarInput" 
-                           accept="image/*" 
-                           class="hidden"
-                           @change="uploadAvatar($event)">
-                </div>
-                <div>
-                    <h3 class="text-lg font-medium text-gray-900" x-text="fullName">{{ user.first_name }} {{ user.last_name }}</h3>
-                    <p class="text-sm text-gray-500" x-text="email">{{ user.email }}</p>
-                    <p class="text-xs text-gray-400 mt-1">
-                        Member since {{ user.created_at.strftime('%B %Y') }}
-                    </p>
-                </div>
-            </div>
-
-            <!-- Profile Form -->
-            <form id="profile-form" 
-                  hx-put="{{ url_for('update_profile') }}" 
-                  hx-target="#profile-form" 
-                  hx-swap="outerHTML"
-                  hx-indicator="#profile-loading"
-                  class="space-y-6">
+    <!-- Profile Information -->
+    <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <!-- User Details Card -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+                    Account Information
+                </h3>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- First Name -->
-                    <div>
-                        <label for="first_name" class="block text-sm font-medium text-gray-700">
-                            First name
-                        </label>
-                        <div class="mt-1" x-show="!editingProfile">
-                            <p class="text-sm text-gray-900 py-2" x-text="firstName">{{ user.first_name }}</p>
-                            <button type="button" 
-                                    @click="editingProfile = true"
-                                    class="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
-                                Edit
-                            </button>
-                        </div>
-                        <div class="mt-1" x-show="editingProfile">
-                            <input id="first_name" 
-                                   name="first_name" 
-                                   type="text" 
-                                   class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                   x-model="firstName"
-                                   :value="firstName">
-                        </div>
-                    </div>
-
-                    <!-- Last Name -->
-                    <div>
-                        <label for="last_name" class="block text-sm font-medium text-gray-700">
-                            Last name
-                        </label>
-                        <div class="mt-1" x-show="!editingProfile">
-                            <p class="text-sm text-gray-900 py-2" x-text="lastName">{{ user.last_name }}</p>
-                        </div>
-                        <div class="mt-1" x-show="editingProfile">
-                            <input id="last_name" 
-                                   name="last_name" 
-                                   type="text" 
-                                   class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                   x-model="lastName"
-                                   :value="lastName">
-                        </div>
-                    </div>
-
-                    <!-- Email -->
-                    <div>
-                        <label for="email" class="block text-sm font-medium text-gray-700">
-                            Email address
-                        </label>
-                        <div class="mt-1" x-show="!editingProfile">
-                            <p class="text-sm text-gray-900 py-2" x-text="email">{{ user.email }}</p>
-                            {% if not user.email_verified %}
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                    Unverified
-                                </span>
-                                <button type="button" 
-                                        hx-post="{{ url_for('resend_verification') }}"
-                                        hx-target="#verification-status"
-                                        class="ml-2 text-indigo-600 hover:text-indigo-500 text-sm font-medium">
-                                    Resend verification
-                                </button>
-                            {% else %}
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    Verified
-                                </span>
-                            {% endif %}
-                        </div>
-                        <div class="mt-1" x-show="editingProfile">
-                            <input id="email" 
-                                   name="email" 
-                                   type="email" 
-                                   class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                   x-model="email"
-                                   :value="email">
-                        </div>
-                        <div id="verification-status"></div>
-                    </div>
-
-                    <!-- Username -->
-                    <div>
-                        <label for="username" class="block text-sm font-medium text-gray-700">
-                            Username
-                        </label>
-                        <div class="mt-1" x-show="!editingProfile">
-                            <p class="text-sm text-gray-900 py-2" x-text="username">{{ user.username }}</p>
-                        </div>
-                        <div class="mt-1" x-show="editingProfile">
-                            <input id="username" 
-                                   name="username" 
-                                   type="text" 
-                                   class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                   x-model="username"
-                                   :value="username">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="flex justify-end space-x-3" x-show="editingProfile">
-                    <button type="button" 
-                            @click="cancelEdit()"
-                            class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        Cancel
-                    </button>
-                    <button type="submit" 
-                            class="bg-indigo-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        <span id="profile-loading" class="htmx-indicator">
-                            <svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white inline" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Saving...
-                        </span>
-                        <span class="htmx-indicator-none">
-                            Save Changes
-                        </span>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Password Change Card -->
-    <div class="bg-white shadow rounded-lg mb-6">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-medium text-gray-900">Change Password</h2>
-            <p class="text-sm text-gray-500">Update your password to keep your account secure</p>
-        </div>
-        
-        <div class="p-6">
-            <form id="password-form" 
-                  hx-put="{{ url_for('change_password') }}" 
-                  hx-target="#password-form" 
-                  hx-swap="outerHTML"
-                  hx-indicator="#password-loading"
-                  class="space-y-6"
-                  x-data="passwordForm()">
-                
-                <!-- Current Password -->
-                <div>
-                    <label for="current_password" class="block text-sm font-medium text-gray-700">
-                        Current password
-                    </label>
-                    <div class="mt-1 relative">
-                        <input id="current_password" 
-                               name="current_password" 
-                               :type="showCurrentPassword ? 'text' : 'password'" 
-                               required 
-                               class="block w-full pr-10 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                               x-model="currentPassword">
-                        <button type="button" 
-                                class="absolute inset-y-0 right-0 pr-3 flex items-center"
-                                @click="showCurrentPassword = !showCurrentPassword">
-                            <svg x-show="!showCurrentPassword" class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                            </svg>
-                            <svg x-show="showCurrentPassword" class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- New Password -->
-                <div>
-                    <label for="new_password" class="block text-sm font-medium text-gray-700">
-                        New password
-                    </label>
-                    <div class="mt-1 relative">
-                        <input id="new_password" 
-                               name="new_password" 
-                               :type="showNewPassword ? 'text' : 'password'" 
-                               required 
-                               class="block w-full pr-10 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                               hx-post="{{ url_for('check_password_strength') }}"
-                               hx-trigger="input changed delay:500ms"
-                               hx-target="#new-password-strength"
-                               hx-include="[name='new_password']"
-                               x-model="newPassword">
-                        <button type="button" 
-                                class="absolute inset-y-0 right-0 pr-3 flex items-center"
-                                @click="showNewPassword = !showNewPassword">
-                            <svg x-show="!showNewPassword" class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                            </svg>
-                            <svg x-show="showNewPassword" class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path>
-                            </svg>
-                        </button>
-                    </div>
-                    <div id="new-password-strength" class="mt-2"></div>
-                </div>
-
-                <!-- Confirm New Password -->
-                <div>
-                    <label for="confirm_new_password" class="block text-sm font-medium text-gray-700">
-                        Confirm new password
-                    </label>
-                    <div class="mt-1 relative">
-                        <input id="confirm_new_password" 
-                               name="confirm_new_password" 
-                               :type="showConfirmPassword ? 'text' : 'password'" 
-                               required 
-                               class="block w-full pr-10 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                               x-model="confirmNewPassword"
-                               :class="{'border-red-300 focus:border-red-500 focus:ring-red-500': passwordMismatch, 'border-green-300 focus:border-green-500 focus:ring-green-500': passwordMatch}">
-                        <button type="button" 
-                                class="absolute inset-y-0 right-0 pr-3 flex items-center"
-                                @click="showConfirmPassword = !showConfirmPassword">
-                            <svg x-show="!showConfirmPassword" class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                            </svg>
-                            <svg x-show="showConfirmPassword" class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path>
-                            </svg>
-                        </button>
-                    </div>
-                    <div x-show="passwordMismatch" class="mt-1 text-sm text-red-600">
-                        Passwords do not match
-                    </div>
-                    <div x-show="passwordMatch && confirmNewPassword.length > 0" class="mt-1 text-sm text-green-600">
-                        Passwords match
-                    </div>
-                </div>
-
-                <!-- Submit Button -->
-                <div class="flex justify-end">
-                    <button type="submit" 
-                            :disabled="!canChangePassword"
-                            class="bg-indigo-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <span id="password-loading" class="htmx-indicator">
-                            <svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white inline" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Changing password...
-                        </span>
-                        <span class="htmx-indicator-none">
-                            Change Password
-                        </span>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Account Settings Card -->
-    <div class="bg-white shadow rounded-lg">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-medium text-gray-900">Account Settings</h2>
-            <p class="text-sm text-gray-500">Manage your account preferences and security</p>
-        </div>
-        
-        <div class="p-6 space-y-6">
-            <!-- Account Status -->
-            <div class="flex items-center justify-between">
-                <div>
-                    <h3 class="text-sm font-medium text-gray-900">Account Status</h3>
-                    <p class="text-sm text-gray-500">Your account is currently active</p>
-                </div>
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    Active
-                </span>
-            </div>
-
-            <!-- Last Login -->
-            <div class="flex items-center justify-between">
-                <div>
-                    <h3 class="text-sm font-medium text-gray-900">Last Login</h3>
-                    <p class="text-sm text-gray-500">{{ user.last_login_at.strftime('%B %d, %Y at %I:%M %p') if user.last_login_at else 'Never' }}</p>
-                </div>
-            </div>
-
-            <!-- Danger Zone -->
-            <div class="border-t border-gray-200 pt-6">
-                <h3 class="text-sm font-medium text-red-900 mb-4">Danger Zone</h3>
                 <div class="space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h4 class="text-sm font-medium text-gray-900">Deactivate Account</h4>
-                            <p class="text-sm text-gray-500">Temporarily disable your account</p>
+                    <div class="flex items-center">
+                        <div class="h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center">
+                            <span class="text-xl font-medium text-indigo-700">
+                                {{ current_user.first_name[0] if current_user.first_name else current_user.email[0] }}{{ current_user.last_name[0] if current_user.last_name else '' }}
+                            </span>
                         </div>
-                        <button type="button" 
-                                class="bg-yellow-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
-                            Deactivate
-                        </button>
-                    </div>
-                    
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h4 class="text-sm font-medium text-gray-900">Delete Account</h4>
-                            <p class="text-sm text-gray-500">Permanently delete your account and all data</p>
+                        <div class="ml-4">
+                            <h4 class="text-lg font-medium text-gray-900">
+                                {% if current_user.first_name or current_user.last_name %}
+                                    {{ current_user.first_name }} {{ current_user.last_name }}
+                                {% else %}
+                                    {{ current_user.username }}
+                                {% endif %}
+                            </h4>
+                            <p class="text-sm text-gray-500">{{ current_user.email }}</p>
                         </div>
-                        <button type="button" 
-                                class="bg-red-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                            Delete Account
-                        </button>
                     </div>
+
+                    <div class="border-t pt-4">
+                        <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">User ID</dt>
+                                <dd class="mt-1 text-sm text-gray-900 font-mono">{{ current_user.id }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Username</dt>
+                                <dd class="mt-1 text-sm text-gray-900">{{ current_user.username }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Email</dt>
+                                <dd class="mt-1 text-sm text-gray-900">{{ current_user.email }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Role</dt>
+                                <dd class="mt-1">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                        {% if current_user.role == 'admin' %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ current_user.role.title() }}
+                                    </span>
+                                </dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Account Status</dt>
+                                <dd class="mt-1">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                        {% if current_user.is_active %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                        {% if current_user.is_active %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                </dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Email Verified</dt>
+                                <dd class="mt-1">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                        {% if current_user.email_verified %}bg-green-100 text-green-800{% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                        {% if current_user.email_verified %}Verified{% else %}Pending{% endif %}
+                                    </span>
+                                </dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Last Login</dt>
+                                <dd class="mt-1 text-sm text-gray-900">
+                                    {% if current_user.last_login_at %}
+                                        {{ current_user.last_login_at.strftime('%b %d, %Y at %I:%M %p') }}
+                                    {% else %}
+                                        Never
+                                    {% endif %}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">Member Since</dt>
+                                <dd class="mt-1 text-sm text-gray-900">
+                                    {{ current_user.created_at.strftime('%b %d, %Y') }}
+                                </dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-md text-sm font-medium">
+                        Edit Profile
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Household Memberships Card -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+                    Household Memberships
+                </h3>
+                
+                {% if households %}
+                    <div class="space-y-3">
+                        {% for household in households %}
+                        <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                            <div class="flex items-center">
+                                <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                    <span class="text-sm font-medium text-blue-700">
+                                        {{ household.name[0] }}
+                                    </span>
+                                </div>
+                                <div class="ml-3">
+                                    <h4 class="text-sm font-medium text-gray-900">{{ household.name }}</h4>
+                                    <p class="text-xs text-gray-500">
+                                        {% if household.description %}
+                                            {{ household.description[:50] }}{% if household.description|length > 50 %}...{% endif %}
+                                        {% else %}
+                                            No description
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    Member
+                                </span>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    <a href="/households/{{ household.id }}" class="text-indigo-600 hover:text-indigo-500">
+                                        View →
+                                    </a>
+                                </p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-6">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No households</h3>
+                        <p class="mt-1 text-sm text-gray-500">You're not a member of any households yet.</p>
+                        <div class="mt-4">
+                            <a href="/households" class="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
+                                Browse households →
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="mt-6">
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+                    Quick Actions
+                </h3>
+                
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <a href="/settings" class="group relative rounded-lg p-6 bg-white border border-gray-200 hover:border-indigo-500 hover:bg-gray-50">
+                        <div>
+                            <span class="rounded-lg inline-flex p-3 bg-indigo-50 text-indigo-700 group-hover:bg-indigo-100">
+                                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                            </span>
+                        </div>
+                        <div class="mt-4">
+                            <h3 class="text-sm font-medium text-gray-900">Settings</h3>
+                            <p class="mt-2 text-sm text-gray-500">Update your preferences and account settings.</p>
+                        </div>
+                    </a>
+
+                    <a href="/households" class="group relative rounded-lg p-6 bg-white border border-gray-200 hover:border-indigo-500 hover:bg-gray-50">
+                        <div>
+                            <span class="rounded-lg inline-flex p-3 bg-blue-50 text-blue-700 group-hover:bg-blue-100">
+                                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0V9a2 2 0 002 2h4a2 2 0 002-2V7m-6 0h6"></path>
+                                </svg>
+                            </span>
+                        </div>
+                        <div class="mt-4">
+                            <h3 class="text-sm font-medium text-gray-900">Households</h3>
+                            <p class="mt-2 text-sm text-gray-500">Manage your household memberships.</p>
+                        </div>
+                    </a>
+
+                    <a href="/expenses" class="group relative rounded-lg p-6 bg-white border border-gray-200 hover:border-indigo-500 hover:bg-gray-50">
+                        <div>
+                            <span class="rounded-lg inline-flex p-3 bg-green-50 text-green-700 group-hover:bg-green-100">
+                                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                </svg>
+                            </span>
+                        </div>
+                        <div class="mt-4">
+                            <h3 class="text-sm font-medium text-gray-900">Expenses</h3>
+                            <p class="mt-2 text-sm text-gray-500">View and manage your expenses.</p>
+                        </div>
+                    </a>
+
+                    <a href="/logout" class="group relative rounded-lg p-6 bg-white border border-gray-200 hover:border-red-500 hover:bg-red-50">
+                        <div>
+                            <span class="rounded-lg inline-flex p-3 bg-red-50 text-red-700 group-hover:bg-red-100">
+                                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                                </svg>
+                            </span>
+                        </div>
+                        <div class="mt-4">
+                            <h3 class="text-sm font-medium text-gray-900">Sign Out</h3>
+                            <p class="mt-2 text-sm text-gray-500">Sign out of your account.</p>
+                        </div>
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_scripts %}
-<script>
-    function profileManager() {
-        return {
-            editingProfile: false,
-            firstName: '{{ user.first_name }}',
-            lastName: '{{ user.last_name }}',
-            email: '{{ user.email }}',
-            username: '{{ user.username }}',
-            avatarUrl: '{{ user.avatar_url }}',
-            
-            get fullName() {
-                return `${this.firstName} ${this.lastName}`.trim();
-            },
-            
-            cancelEdit() {
-                this.editingProfile = false;
-                // Reset to original values
-                this.firstName = '{{ user.first_name }}';
-                this.lastName = '{{ user.last_name }}';
-                this.email = '{{ user.email }}';
-                this.username = '{{ user.username }}';
-            },
-            
-            uploadAvatar(event) {
-                const file = event.target.files[0];
-                if (file) {
-                    const formData = new FormData();
-                    formData.append('avatar', file);
-                    
-                    fetch('{{ url_for("upload_avatar") }}', {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            this.avatarUrl = data.avatar_url;
-                        } else {
-                            alert('Failed to upload avatar: ' + data.message);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error uploading avatar:', error);
-                        alert('Failed to upload avatar');
-                    });
-                }
-            }
-        }
-    }
-    
-    function passwordForm() {
-        return {
-            currentPassword: '',
-            newPassword: '',
-            confirmNewPassword: '',
-            showCurrentPassword: false,
-            showNewPassword: false,
-            showConfirmPassword: false,
-            
-            get passwordMatch() {
-                return this.newPassword.length > 0 && 
-                       this.confirmNewPassword.length > 0 && 
-                       this.newPassword === this.confirmNewPassword;
-            },
-            
-            get passwordMismatch() {
-                return this.confirmNewPassword.length > 0 && 
-                       this.newPassword !== this.confirmNewPassword;
-            },
-            
-            get canChangePassword() {
-                return this.currentPassword.length > 0 && 
-                       this.newPassword.length >= 8 && 
-                       this.passwordMatch;
-            }
-        }
-    }
-</script>
 {% endblock %} 

@@ -112,16 +112,6 @@ function closeExpenseModal() {
 }
 
 /**
- * Edit expense (placeholder)
- * @param {string} expenseId - The ID of the expense to edit
- */
-function editExpense(expenseId) {
-    // TODO: Implement expense editing functionality
-    showNotification('Expense editing functionality coming soon!', 'info');
-    console.log('Edit expense:', expenseId);
-}
-
-/**
  * Delete expense (placeholder)
  * @param {string} expenseId - The ID of the expense to delete
  */
@@ -366,7 +356,6 @@ document.addEventListener('keydown', function(e) {
 
 // Export functions for use in templates
 window.viewExpenseDetails = viewExpenseDetails;
-window.editExpense = editExpense;
 window.deleteExpense = deleteExpense;
 window.duplicateExpense = duplicateExpense;
 window.closeExpenseModal = closeExpenseModal;

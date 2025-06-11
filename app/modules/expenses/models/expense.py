@@ -5,41 +5,15 @@ Expense model for expenses module.
 from datetime import date, datetime
 from decimal import Decimal
 from typing import List, Optional
-import json
 
 from sqlalchemy import Column, String, Text, Date, DECIMAL, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import TypeDecorator, TEXT
 
 from app.core.models.base import BaseModel
 from app.core.models.mixins import ActiveMixin
 
-
-class TagsType(TypeDecorator):
-    """Custom type for storing tags as JSON that works with both PostgreSQL and SQLite."""
-    
-    impl = TEXT
-    cache_ok = True
-    
-    def process_bind_param(self, value, dialect):
-        """Convert Python list to JSON string."""
-        if value is None:
-            return None
-        if isinstance(value, list):
-            return json.dumps(value)
-        return value
-    
-    def process_result_value(self, value, dialect):
-        """Convert JSON string back to Python list."""
-        if value is None:
-            return None
-        if isinstance(value, str):
-            try:
-                return json.loads(value)
-            except (json.JSONDecodeError, ValueError):
-                return []
-        return value
 
 
 class Expense(BaseModel, ActiveMixin):
@@ -111,9 +85,9 @@ class Expense(BaseModel, ActiveMixin):
         nullable=True
     )
     
-    # Tags for additional categorization (database-agnostic JSON storage)
+    # Tags for additional categorization (PostgreSQL ARRAY)
     tags = Column(
-        TagsType,
+        ARRAY(String(50)),
         nullable=True,
         default=None
     )

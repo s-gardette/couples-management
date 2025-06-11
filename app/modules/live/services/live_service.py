@@ -9,13 +9,16 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Tuple
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from sqlalchemy import desc, and_, or_
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import desc, and_, or_, func
 
 from app.core.services.base_service import BaseService
 from app.modules.expenses.models.expense import Expense
 from app.modules.expenses.models.payment import Payment
 from app.modules.expenses.models.household import Household
+from app.modules.expenses.models.expense_share import ExpenseShare
+from app.modules.expenses.models.category import Category
+from app.modules.auth.models.user import User
 from app.modules.expenses.services.expense_service import ExpenseService
 from app.modules.expenses.services.analytics_service import AnalyticsService
 from app.database import get_db
@@ -32,42 +35,82 @@ class LiveService:
     with support for filtering, pagination, and live updates.
     """
     
-    def __init__(self, db=None):
+    def __init__(self, db: Session):
         """
         Initialize the LiveService.
         
         Args:
-            db: Optional database session. If not provided, will use mock data for testing.
+            db: Database session for real data operations.
         """
         self.db = db
         self.live_helpers = LiveHelpers()
-        
-    def _get_mock_expenses(self) -> List[Dict[str, Any]]:
-        """Get mock expense data for testing."""
-        return [
-            {
-                'id': 'expense-1',
-                'title': 'Groceries',
-                'amount': 85.50,
-                'description': 'Weekly grocery shopping',
-                'date': '2024-01-15',
-                'date_display': 'Jan 15, 2024',
-                'category': 'Food',
-                'payment_status': 'paid',
-                'created_by': {'name': 'John Doe', 'id': 'user-1'}
-            },
-            {
-                'id': 'expense-2',
-                'title': 'Utilities',
-                'amount': 120.00,
-                'description': 'Monthly electricity bill',
-                'date': '2024-01-14',
-                'date_display': 'Jan 14, 2024',
-                'category': 'Utilities',
-                'payment_status': 'pending',
-                'created_by': {'name': 'Jane Smith', 'id': 'user-2'}
+
+    async def get_live_stats(
+        self,
+        household_id: Optional[str] = None,
+        current_user_id: Optional[UUID] = None
+    ) -> Dict[str, Any]:
+        """Get live summary statistics for the household."""
+        try:
+            # Build base query
+            query = self.db.query(Expense).filter(Expense.is_active == True)
+            
+            # Filter by household if provided
+            if household_id:
+                # Convert string to UUID if needed
+                try:
+                    household_uuid = UUID(household_id) if isinstance(household_id, str) else household_id
+                    query = query.filter(Expense.household_id == household_uuid)
+                except ValueError:
+                    logger.error(f"Invalid household_id format in stats: {household_id}")
+                    return {
+                        'total_expenses': 0,
+                        'total_amount': 0,
+                        'this_month_amount': 0,
+                        'this_month_count': 0,
+                        'success': False,
+                        'message': f'Invalid household ID format: {household_id}'
+                    }
+            
+            # Get total expense count and amount
+            total_expenses = query.count()
+            total_amount = query.with_entities(func.sum(Expense.amount)).scalar() or 0
+            
+            # Get counts by payment status
+            # Count expenses with shares that are paid/unpaid
+            paid_count = query.join(ExpenseShare).filter(
+                ExpenseShare.is_active == True,
+                ExpenseShare.is_paid == True
+            ).distinct().count()
+            
+            unpaid_count = query.join(ExpenseShare).filter(
+                ExpenseShare.is_active == True,
+                ExpenseShare.is_paid == False
+            ).distinct().count()
+            
+            return {
+                'total_expenses': total_expenses,
+                'total_amount': float(total_amount),
+                'paid_count': paid_count,
+                'pending_count': unpaid_count,  # Use unpaid_count for pending
+                'unpaid_count': unpaid_count,
+                'recent_activity': total_expenses,  # Could be refined to count recent activity
+                'success': True,
+                'message': 'Statistics calculated successfully'
             }
-        ]
+            
+        except Exception as e:
+            logger.error(f"Error getting live stats: {e}")
+            return {
+                'total_expenses': 0,
+                'total_amount': 0.0,
+                'paid_count': 0,
+                'pending_count': 0,
+                'unpaid_count': 0,
+                'recent_activity': 0,
+                'success': False,
+                'message': f'Error calculating statistics: {str(e)}'
+            }
 
     async def get_live_expenses(
         self,
@@ -93,27 +136,127 @@ class LiveService:
             Dictionary with formatted expense data
         """
         try:
-            if self.db is None:
-                # Return mock data for testing
-                mock_expenses = self._get_mock_expenses()
-                return {
-                    'expenses': mock_expenses,
-                    'total': len(mock_expenses),
-                    'page': page,
-                    'per_page': per_page,
-                    'success': True,
-                    'message': 'Mock data retrieved successfully'
-                }
+            # Build base query with joins
+            query = self.db.query(Expense).options(
+                joinedload(Expense.creator),
+                joinedload(Expense.category),
+                joinedload(Expense.shares)
+            ).filter(Expense.is_active == True)
             
-            # TODO: Implement actual database queries when database models are available
-            # For now, return empty data structure
+            # Filter by household if provided
+            if household_id:
+                # Convert string to UUID if needed
+                try:
+                    household_uuid = UUID(household_id) if isinstance(household_id, str) else household_id
+                    query = query.filter(Expense.household_id == household_uuid)
+                except ValueError:
+                    logger.error(f"Invalid household_id format: {household_id}")
+                    return {
+                        'expenses': [],
+                        'total': 0,
+                        'page': page,
+                        'per_page': per_page,
+                        'success': False,
+                        'message': f'Invalid household ID format: {household_id}'
+                    }
+            
+            # Apply filters
+            if filters:
+                if filters.get('search'):
+                    search_term = f"%{filters['search']}%"
+                    query = query.filter(
+                        or_(
+                            Expense.title.ilike(search_term),
+                            Expense.description.ilike(search_term)
+                        )
+                    )
+                
+                if filters.get('category'):
+                    # Join with category to filter by category name
+                    query = query.join(Category).filter(
+                        Category.name.ilike(f"%{filters['category']}%")
+                    )
+                
+                if filters.get('min_amount'):
+                    query = query.filter(Expense.amount >= filters['min_amount'])
+                
+                if filters.get('max_amount'):
+                    query = query.filter(Expense.amount <= filters['max_amount'])
+                
+                if filters.get('created_by') == 'me':
+                    query = query.filter(Expense.created_by == user_id)
+                
+                # Date range filters
+                if filters.get('date_range'):
+                    today = datetime.now().date()
+                    if filters['date_range'] == 'today':
+                        query = query.filter(Expense.expense_date == today)
+                    elif filters['date_range'] == 'week':
+                        week_start = today - timedelta(days=today.weekday())
+                        query = query.filter(Expense.expense_date >= week_start)
+                    elif filters['date_range'] == 'month':
+                        month_start = today.replace(day=1)
+                        query = query.filter(Expense.expense_date >= month_start)
+            
+            # Apply sorting
+            if sort_by == "date_desc":
+                query = query.order_by(desc(Expense.expense_date), desc(Expense.created_at))
+            elif sort_by == "date_asc":
+                query = query.order_by(Expense.expense_date, Expense.created_at)
+            elif sort_by == "amount_desc":
+                query = query.order_by(desc(Expense.amount))
+            elif sort_by == "amount_asc":
+                query = query.order_by(Expense.amount)
+            elif sort_by == "title_asc":
+                query = query.order_by(Expense.title)
+            elif sort_by == "title_desc":
+                query = query.order_by(desc(Expense.title))
+            
+            # Get total count for pagination
+            total = query.count()
+            
+            # Apply pagination
+            offset = (page - 1) * per_page
+            expenses = query.offset(offset).limit(per_page).all()
+            
+            # Format expenses for template
+            formatted_expenses = []
+            for expense in expenses:
+                # Determine payment status
+                payment_status = 'unpaid'
+                if expense.shares:
+                    paid_shares = sum(1 for share in expense.shares if share.is_active and share.is_paid)
+                    total_shares = sum(1 for share in expense.shares if share.is_active)
+                    
+                    if paid_shares == total_shares and total_shares > 0:
+                        payment_status = 'paid'
+                    elif paid_shares > 0:
+                        payment_status = 'partial'
+                
+                formatted_expense = {
+                    'id': str(expense.id),
+                    'title': expense.title,
+                    'amount': float(expense.amount),
+                    'formatted_amount': expense.formatted_amount,
+                    'description': expense.description or '',
+                    'date': expense.expense_date.isoformat(),
+                    'date_display': expense.expense_date.strftime('%b %d, %Y'),
+                    'category': expense.category.name if expense.category else 'Other',
+                    'payment_status': payment_status,
+                    'created_by': {
+                        'name': expense.creator.display_name if expense.creator else 'Unknown',
+                        'id': str(expense.creator.id) if expense.creator else None
+                    }
+                }
+                formatted_expenses.append(formatted_expense)
+            
             return {
-                'expenses': [],
-                'total': 0,
+                'expenses': formatted_expenses,
+                'total': total,
                 'page': page,
                 'per_page': per_page,
                 'success': True,
-                'message': 'No expenses found'
+                'message': 'Expenses retrieved successfully'
             }
             
         except Exception as e:
@@ -134,23 +277,70 @@ class LiveService:
     ) -> Dict[str, Any]:
         """Get live balance calculations with real-time updates."""
         try:
-            if self.db is None:
-                # Return mock balance data
-                return {
-                    'total_expenses': 205.50,
-                    'total_paid': 85.50,
-                    'total_pending': 120.00,
-                    'user_balance': 42.75,
-                    'success': True,
-                    'message': 'Mock balance data retrieved'
-                }
+            # Build base query
+            query = self.db.query(Expense).filter(Expense.is_active == True)
             
-            # TODO: Implement actual balance calculations
+            # Filter by household if provided
+            if household_id:
+                # Convert string to UUID if needed
+                try:
+                    household_uuid = UUID(household_id) if isinstance(household_id, str) else household_id
+                    query = query.filter(Expense.household_id == household_uuid)
+                except ValueError:
+                    logger.error(f"Invalid household_id format in balances: {household_id}")
+                    return {
+                        'total_expenses': 0.0,
+                        'total_paid': 0.0,
+                        'total_pending': 0.0,
+                        'user_balance': 0.0,
+                        'success': False,
+                        'message': f'Invalid household ID format: {household_id}'
+                    }
+            
+            # Calculate totals
+            total_expenses = query.with_entities(func.sum(Expense.amount)).scalar() or 0
+            
+            # Get paid and pending amounts through shares
+            paid_shares = self.db.query(ExpenseShare).join(Expense).filter(
+                Expense.is_active == True,
+                ExpenseShare.is_active == True,
+                ExpenseShare.is_paid == True
+            )
+            if household_id:
+                paid_shares = paid_shares.filter(Expense.household_id == household_uuid)
+            
+            total_paid = paid_shares.with_entities(func.sum(ExpenseShare.share_amount)).scalar() or 0
+            
+            pending_shares = self.db.query(ExpenseShare).join(Expense).filter(
+                Expense.is_active == True,
+                ExpenseShare.is_active == True,
+                ExpenseShare.is_paid == False
+            )
+            if household_id:
+                pending_shares = pending_shares.filter(Expense.household_id == household_uuid)
+            
+            total_pending = pending_shares.with_entities(func.sum(ExpenseShare.share_amount)).scalar() or 0
+            
+            # Calculate user balance (what they owe vs what they've paid)
+            user_balance = 0.0
+            if current_user_id:
+                user_shares = self.db.query(ExpenseShare).join(Expense).filter(
+                    Expense.is_active == True,
+                    ExpenseShare.is_active == True,
+                    ExpenseShare.user_id == current_user_id
+                )
+                if household_id:
+                    user_shares = user_shares.filter(Expense.household_id == household_uuid)
+                
+                user_total_shares = user_shares.with_entities(func.sum(ExpenseShare.share_amount)).scalar() or 0
+                user_paid_shares = user_shares.filter(ExpenseShare.is_paid == True).with_entities(func.sum(ExpenseShare.share_amount)).scalar() or 0
+                user_balance = float(user_paid_shares) - float(user_total_shares)
+            
             return {
-                'total_expenses': 0.0,
-                'total_paid': 0.0,
-                'total_pending': 0.0,
-                'user_balance': 0.0,
+                'total_expenses': float(total_expenses),
+                'total_paid': float(total_paid),
+                'total_pending': float(total_pending),
+                'user_balance': user_balance,
                 'success': True,
                 'message': 'Balance calculations completed'
             }
@@ -158,45 +348,12 @@ class LiveService:
         except Exception as e:
             logger.error(f"Error getting live balances: {e}")
             return {
+                'total_expenses': 0.0,
+                'total_paid': 0.0,
+                'total_pending': 0.0,
+                'user_balance': 0.0,
                 'success': False,
                 'message': f'Error calculating balances: {str(e)}'
-            }
-
-    async def get_live_stats(
-        self,
-        household_id: Optional[str] = None,
-        current_user_id: Optional[UUID] = None
-    ) -> Dict[str, Any]:
-        """Get live summary statistics for the household."""
-        try:
-            if self.db is None:
-                # Return mock stats data
-                return {
-                    'total_expenses': 2,
-                    'total_amount': 205.50,
-                    'paid_count': 1,
-                    'pending_count': 1,
-                    'recent_activity': 2,
-                    'success': True,
-                    'message': 'Mock statistics retrieved'
-                }
-            
-            # TODO: Implement actual statistics calculations
-            return {
-                'total_expenses': 0,
-                'total_amount': 0.0,
-                'paid_count': 0,
-                'pending_count': 0,
-                'recent_activity': 0,
-                'success': True,
-                'message': 'Statistics calculated successfully'
-            }
-            
-        except Exception as e:
-            logger.error(f"Error getting live stats: {e}")
-            return {
-                'success': False,
-                'message': f'Error calculating statistics: {str(e)}'
             }
 
     async def get_live_expense_details(

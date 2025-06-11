@@ -6,7 +6,7 @@ import logging
 from typing import Optional
 from fastapi import APIRouter, Request, Depends, HTTPException, status, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
+
 from sqlalchemy.orm import Session
 
 from app.modules.admin.dependencies import require_admin_auth, require_admin_permission, check_admin_permission
@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 # Create router
 router = APIRouter(prefix="/admin", tags=["admin-ui"])
 
-# Setup templates
-templates = Jinja2Templates(directory="templates")
+# Setup Enhanced Jinja2 templates with automatic global context
+from app.core.templates import templates
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -482,22 +482,227 @@ async def admin_households(
 @router.get("/expenses", response_class=HTMLResponse)
 async def admin_expenses(
     request: Request,
-    admin_user: User = Depends(require_admin_auth)
+    admin_user: User = Depends(require_admin_auth),
+    db: Session = Depends(get_db),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    search: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    household_id: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None)
 ):
     """
     Expense management interface.
     """
+    from app.modules.expenses.models.expense import Expense
+    from app.modules.expenses.models.household import Household
+    from app.modules.expenses.models.category import Category
+    from app.modules.expenses.models.expense_share import ExpenseShare
+    from app.modules.expenses.models.user_household import UserHousehold
+    from sqlalchemy.orm import joinedload
+    from sqlalchemy import desc, or_, and_, func
+    from datetime import datetime, date
+    from decimal import Decimal
+    
     logger.info(f"Admin expenses page accessed by {admin_user.email}")
     
-    return templates.TemplateResponse(
-        request,
-        "admin/expenses/list.html",
-        {
-            "current_user": admin_user,
-            "page_title": "Expense Management",
-            "admin_section": "expenses"
-        }
-    )
+    try:
+        
+        # Build base query for all expenses (admin can see everything)
+        query = (
+            db.query(Expense)
+            .options(
+                joinedload(Expense.category),
+                joinedload(Expense.creator),
+                joinedload(Expense.household),
+                joinedload(Expense.shares).joinedload(ExpenseShare.user_household).joinedload(UserHousehold.user)
+            )
+            .filter(Expense.is_active == True)
+        )
+        
+        # Apply filters
+        if search:
+            query = query.filter(
+                or_(
+                    Expense.title.ilike(f"%{search}%"),
+                    Expense.description.ilike(f"%{search}%")
+                )
+            )
+        
+        if category:
+            query = query.join(Category).filter(Category.name.ilike(f"%{category}%"))
+        
+        if household_id:
+            query = query.filter(Expense.household_id == household_id)
+        
+        if date_from:
+            try:
+                start_date = datetime.strptime(date_from, "%Y-%m-%d").date()
+                query = query.filter(Expense.expense_date >= start_date)
+            except ValueError:
+                pass  # Ignore invalid date format
+        
+        if date_to:
+            try:
+                end_date = datetime.strptime(date_to, "%Y-%m-%d").date()
+                query = query.filter(Expense.expense_date <= end_date)
+            except ValueError:
+                pass  # Ignore invalid date format
+        
+        # Get total count for pagination
+        total_expenses = query.count()
+        
+        # Apply pagination and sorting
+        expenses = (
+            query.order_by(desc(Expense.expense_date))
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
+        
+        # Calculate statistics
+        stats_query = db.query(
+            func.count(Expense.id).label('total_count'),
+            func.sum(Expense.amount).label('total_amount')
+        ).filter(Expense.is_active == True)
+        
+        stats = stats_query.first()
+        
+        # Calculate this month's stats separately
+        this_month_start = date.today().replace(day=1)
+        this_month_query = db.query(
+            func.count(Expense.id).label('count'),
+            func.sum(Expense.amount).label('amount')
+        ).filter(
+            Expense.is_active == True,
+            Expense.expense_date >= this_month_start
+        )
+        this_month_stats = this_month_query.first()
+        
+        # Calculate paid vs unpaid
+        paid_query = db.query(func.sum(Expense.amount)).join(ExpenseShare).filter(
+            Expense.is_active == True,
+            ExpenseShare.is_active == True,
+            ExpenseShare.is_paid == True
+        )
+        paid_amount = paid_query.scalar() or Decimal('0')
+        
+        # Get all households for filter dropdown
+        households = db.query(Household).filter(Household.is_active == True).all()
+        
+        # Format expenses for template
+        formatted_expenses = []
+        for expense in expenses:
+            # Calculate payment status
+            if expense.shares:
+                paid_shares = sum(1 for share in expense.shares if share.is_paid and share.is_active)
+                total_shares = sum(1 for share in expense.shares if share.is_active)
+                if paid_shares == total_shares and total_shares > 0:
+                    payment_status = "paid"
+                elif paid_shares > 0:
+                    payment_status = "partial"
+                else:
+                    payment_status = "unpaid"
+            else:
+                payment_status = "unpaid"
+            
+            formatted_expense = {
+                "id": str(expense.id),
+                "title": expense.title,
+                "amount": float(expense.amount),
+                "description": expense.description or "",
+                "date": expense.expense_date.strftime('%Y-%m-%d'),
+                "date_display": expense.expense_date.strftime('%b %d, %Y'),
+                "category": expense.category.name if expense.category else "Other",
+                "household": {
+                    "id": str(expense.household.id),
+                    "name": expense.household.name
+                } if expense.household else None,
+                "created_by": {
+                    "username": expense.creator.username if expense.creator else "Unknown",
+                    "first_name": expense.creator.first_name if expense.creator else "Unknown",
+                    "last_name": expense.creator.last_name if expense.creator else "User"
+                },
+                "payment_status": payment_status
+            }
+            formatted_expenses.append(formatted_expense)
+        
+        # Calculate pagination
+        total_pages = (total_expenses + per_page - 1) // per_page
+        
+        return templates.TemplateResponse(
+            request,
+            "admin/expenses/list.html",
+            {
+                "current_user": admin_user,
+                "page_title": "Expense Management",
+                "admin_section": "expenses",
+                "expenses": formatted_expenses,
+                "households": households,
+                "stats": {
+                    "total_expenses": stats.total_count or 0,
+                    "total_amount": float(stats.total_amount or 0),
+                    "this_month_count": this_month_stats.count or 0,
+                    "this_month_amount": float(this_month_stats.amount or 0),
+                    "paid_amount": float(paid_amount),
+                    "unpaid_amount": float((stats.total_amount or 0) - paid_amount)
+                },
+                "pagination": {
+                    "page": page,
+                    "per_page": per_page,
+                    "total": total_expenses,
+                    "total_pages": total_pages,
+                    "has_previous": page > 1,
+                    "has_next": page < total_pages
+                },
+                "filters": {
+                    "search": search or "",
+                    "category": category or "",
+                    "household_id": household_id or "",
+                    "date_from": date_from or "",
+                    "date_to": date_to or ""
+                }
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Error loading admin expenses: {e}")
+        return templates.TemplateResponse(
+            request,
+            "admin/expenses/list.html",
+            {
+                "current_user": admin_user,
+                "page_title": "Expense Management",
+                "admin_section": "expenses",
+                "expenses": [],
+                "households": [],
+                "stats": {
+                    "total_expenses": 0,
+                    "total_amount": 0,
+                    "this_month_count": 0,
+                    "this_month_amount": 0,
+                    "paid_amount": 0,
+                    "unpaid_amount": 0
+                },
+                "pagination": {
+                    "page": 1,
+                    "per_page": per_page,
+                    "total": 0,
+                    "total_pages": 1,
+                    "has_previous": False,
+                    "has_next": False
+                },
+                "filters": {
+                    "search": "",
+                    "category": "",
+                    "household_id": "",
+                    "date_from": "",
+                    "date_to": ""
+                },
+                "error": "Failed to load expenses"
+            }
+        )
 
 
 @router.get("/analytics", response_class=HTMLResponse)

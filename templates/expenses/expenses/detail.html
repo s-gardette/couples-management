@@ -19,15 +19,15 @@
             <h1 class="text-3xl font-bold text-gray-900">Expense Details</h1>
         </div>
         <div class="flex space-x-3">
-            <button 
-                onclick="editExpense('{{ expense.id }}')"
+            <a 
+                href="/expenses/{{ expense.id }}/edit"
                 class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
                 <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                 </svg>
                 Edit Expense
-            </button>
+            </a>
             <button 
                 onclick="deleteExpense('{{ expense.id }}')"
                 class="inline-flex items-center px-4 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
@@ -188,15 +188,15 @@
                     <h3 class="text-lg font-medium text-gray-900">Quick Actions</h3>
                 </div>
                 <div class="px-6 py-4 space-y-3">
-                    <button 
-                        onclick="editExpense('{{ expense.id }}')"
+                    <a 
+                        href="/expenses/{{ expense.id }}/edit"
                         class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                     >
                         <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                         </svg>
                         Edit Expense
-                    </button>
+                    </a>
                     <button 
                         onclick="duplicateExpense('{{ expense.id }}')"
                         class="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -247,7 +247,7 @@
                                     {% endif %}
                                 </div>
                                 <div>
-                                    <div class="text-base font-medium text-gray-900">{{ share.user.full_name }}</div>
+                                    <div class="text-base font-medium text-gray-900">{{ share.user_household.user.full_name }}</div>
                                     {% if share.is_paid and share.paid_at %}
                                         <div class="text-sm text-green-600">Paid on {{ share.paid_at }}</div>
                                     {% elif not share.is_paid %}
@@ -255,7 +255,7 @@
                                     {% endif %}
                                 </div>
                             </div>
-                            <div class="text-xl font-semibold text-gray-900">${{ "%.2f"|format(share.amount) }}</div>
+                            <div class="text-xl font-semibold text-gray-900">${{ "%.2f"|format(share.share_amount) }}</div>
                         </div>
                     {% endfor %}
                 </div>
@@ -267,10 +267,7 @@
 
 {% block scripts %}
 <script>
-// Placeholder functions for expense actions
-function editExpense(expenseId) {
-    alert(`Edit expense functionality coming soon!\nExpense ID: ${expenseId}`);
-}
+// Expense action functions
 
 function deleteExpense(expenseId) {
     if (confirm('Are you sure you want to delete this expense? This action cannot be undone.')) {

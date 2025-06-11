@@ -67,12 +67,12 @@
                             >
                                 View Details
                             </button>
-                            <button 
+                            <a 
+                                href="/expenses/{{ expense.id }}/edit"
                                 class="text-gray-600 hover:text-gray-500 text-sm font-medium"
-                                onclick="editExpense('{{ expense.id }}')"
                             >
                                 Edit
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -178,12 +178,12 @@
                                         >
                                             View
                                         </button>
-                                        <button 
+                                        <a 
+                                            href="/expenses/{{ expense.id }}/edit"
                                             class="text-gray-600 hover:text-gray-900"
-                                            onclick="editExpense('{{ expense.id }}')"
                                         >
                                             Edit
-                                        </button>
+                                        </a>
                                     </div>
                                 </td>
                             </tr>

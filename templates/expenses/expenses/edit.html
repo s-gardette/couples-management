@@ -1,0 +1,438 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Expense{% endblock %}
+
+{% block head %}
+<script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <a 
+                href="javascript:history.back()" 
+                class="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
+            >
+                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+                Back
+            </a>
+            <h1 class="text-3xl font-bold text-gray-900">Edit Expense</h1>
+        </div>
+        <div class="flex items-center space-x-3">
+            <div class="text-sm text-gray-500">
+                Last updated: {{ expense.updated_at or expense.created_at }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Edit Form -->
+        <div class="lg:col-span-2">
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+                <!-- Form Header -->
+                <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-blue-50">
+                    <div class="flex items-center space-x-3">
+                        <div class="h-10 w-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                            <svg class="h-5 w-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-medium text-gray-900">Update Expense Details</h2>
+                            <p class="text-sm text-gray-600">Modify the expense information below</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Content -->
+                <form method="POST" action="/api/expenses/{{ expense.id }}" x-data="expenseEditForm()" @submit.prevent="submitForm()">
+                    <div class="px-6 py-6 space-y-8">
+                        <!-- Basic Information Section -->
+                        <div class="space-y-6">
+                            <h3 class="text-lg font-medium text-gray-900 flex items-center">
+                                <svg class="mr-2 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Basic Information
+                            </h3>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Title -->
+                                <div class="md:col-span-2">
+                                    <label for="title" class="flex items-center text-sm font-medium text-gray-700 mb-2">
+                                        <svg class="mr-2 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                                        </svg>
+                                        Expense Title *
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        name="title" 
+                                        id="title"
+                                        x-model="form.title"
+                                        @blur="validateField('title')"
+                                        required
+                                        class="block w-full px-4 py-3 rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-lg"
+                                        placeholder="e.g., Groceries at Whole Foods, Dinner at Italian Restaurant"
+                                    >
+                                    <div x-show="errors.title" class="mt-2 text-sm text-red-600" x-text="errors.title"></div>
+                                </div>
+
+                                <!-- Amount -->
+                                <div>
+                                    <label for="amount" class="flex items-center text-sm font-medium text-gray-700 mb-2">
+                                        <svg class="mr-2 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                                        </svg>
+                                        Amount *
+                                    </label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <span class="text-gray-500 text-lg font-medium" x-text="getCurrencySymbol()"></span>
+                                        </div>
+                                        <input 
+                                            type="number" 
+                                            name="amount" 
+                                            id="amount"
+                                            x-model="form.amount"
+                                            @blur="validateField('amount')"
+                                            step="0.01"
+                                            min="0"
+                                            required
+                                            class="pl-10 block w-full px-4 py-3 rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-lg font-medium"
+                                            placeholder="0.00"
+                                        >
+                                    </div>
+                                    <div x-show="errors.amount" class="mt-2 text-sm text-red-600" x-text="errors.amount"></div>
+                                </div>
+
+                                <!-- Date -->
+                                <div>
+                                    <label for="expense_date" class="flex items-center text-sm font-medium text-gray-700 mb-2">
+                                        <svg class="mr-2 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0h6m-6 0l-1 12a2 2 0 002 2h6a2 2 0 002-2L15 7"></path>
+                                        </svg>
+                                        Expense Date
+                                    </label>
+                                    <input 
+                                        type="date" 
+                                        name="expense_date" 
+                                        id="expense_date"
+                                        x-model="form.expense_date"
+                                        class="block w-full px-4 py-3 rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    >
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Description Section -->
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-medium text-gray-900 flex items-center">
+                                <svg class="mr-2 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path>
+                                </svg>
+                                Additional Details
+                            </h3>
+                            
+                            <div>
+                                <label for="description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                                <textarea 
+                                    name="description" 
+                                    id="description"
+                                    x-model="form.description"
+                                    rows="4"
+                                    class="block w-full px-4 py-3 rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    placeholder="Add any additional notes or details about this expense..."
+                                ></textarea>
+                                <p class="mt-2 text-sm text-gray-500">Optional: Add context, receipts notes, or other relevant information</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                        <div class="flex justify-between items-center">
+                            <div class="flex space-x-3">
+                                <button 
+                                    type="button"
+                                    onclick="window.history.back()"
+                                    class="inline-flex items-center px-6 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                                >
+                                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                    Cancel
+                                </button>
+                                <button 
+                                    type="submit"
+                                    :disabled="isSubmitting"
+                                    class="inline-flex items-center px-8 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-show="!isSubmitting">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <svg class="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" x-show="isSubmitting">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span x-show="!isSubmitting">Update Expense</span>
+                                    <span x-show="isSubmitting">Updating...</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Delete Button -->
+                            <form method="POST" action="/expenses/{{ expense.id }}/delete" @submit="return confirm('Are you sure you want to delete this expense? This action cannot be undone.')">
+                                <button 
+                                    type="submit"
+                                    class="inline-flex items-center px-6 py-3 border border-red-300 rounded-lg text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                                >
+                                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                    Delete Expense
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Error Messages -->
+                    <div x-show="hasErrors" class="px-6 py-4 border-t border-red-200 bg-red-50" style="display: none;">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-red-800">Please fix the following errors:</h3>
+                                <div class="mt-2 text-sm text-red-700">
+                                    <ul class="list-disc pl-5 space-y-1">
+                                        <template x-for="(error, field) in errors" :key="field">
+                                            <li x-text="error"></li>
+                                        </template>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Current Expense Info -->
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Current Expense</h3>
+                </div>
+                <div class="px-6 py-4 text-center">
+                    <div class="text-3xl font-bold text-indigo-600 mb-2">${{ "%.2f"|format(expense.amount) }}</div>
+                    <div class="text-lg font-medium text-gray-900 mb-1">{{ expense.title }}</div>
+                    <div class="text-sm text-gray-500">{{ expense.expense_date }}</div>
+                    
+                    <!-- Payment Status -->
+                    <div class="mt-4">
+                        {% if expense.payment_status == 'paid' %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                <svg class="mr-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                </svg>
+                                Fully Paid
+                            </span>
+                        {% elif expense.payment_status == 'pending' %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                                <svg class="mr-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                                </svg>
+                                Partially Paid
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                                <svg class="mr-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm0-14a1 1 0 011 1v4a1 1 0 11-2 0V5a1 1 0 011-1zm0 10a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                                </svg>
+                                Unpaid
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Household Info -->
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Household</h3>
+                </div>
+                <div class="px-6 py-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="h-10 w-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                                <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">{{ expense.household.name }}</div>
+                            <a 
+                                href="/households/{{ expense.household.id }}"
+                                class="text-sm text-indigo-600 hover:text-indigo-500"
+                            >
+                                View household →
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Quick Actions</h3>
+                </div>
+                <div class="px-6 py-4 space-y-3">
+                    <a 
+                        href="/expenses/{{ expense.id }}"
+                        class="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                        <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                        View Details
+                    </a>
+                    <a 
+                        href="/households/{{ expense.household.id }}/expenses"
+                        class="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                        <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                        </svg>
+                        All Expenses
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pass server data to JavaScript -->
+<script>
+window.expenseEditData = {
+    expense: {{ expense_js_data | tojson if expense_js_data else {} }},
+    households: {{ households | tojson if households else [] }}
+};
+</script>
+
+<script>
+function expenseEditForm() {
+    return {
+        isSubmitting: false,
+        form: {
+            title: window.expenseEditData?.expense?.title || '',
+            description: window.expenseEditData?.expense?.description || '',
+            amount: window.expenseEditData?.expense?.amount || '',
+            currency: window.expenseEditData?.expense?.currency || 'USD',
+            expense_date: window.expenseEditData?.expense?.expense_date || new Date().toISOString().split('T')[0],
+            category_id: window.expenseEditData?.expense?.category_id || '',
+            split_method: window.expenseEditData?.expense?.split_method || 'equal',
+            split_data: window.expenseEditData?.expense?.split_data || {},
+            tags: window.expenseEditData?.expense?.tags || [],
+            household_id: window.expenseEditData?.expense?.household_id || ''
+        },
+        errors: {},
+        
+        get hasErrors() {
+            return Object.keys(this.errors).length > 0;
+        },
+        
+        validateField(field) {
+            delete this.errors[field];
+            
+            if (field === 'title') {
+                if (!this.form.title.trim()) {
+                    this.errors.title = 'Title is required';
+                } else if (this.form.title.length > 200) {
+                    this.errors.title = 'Title must be less than 200 characters';
+                }
+            }
+            
+            if (field === 'amount') {
+                const amount = parseFloat(this.form.amount);
+                if (!this.form.amount || isNaN(amount) || amount <= 0) {
+                    this.errors.amount = 'Amount must be greater than 0';
+                }
+            }
+        },
+        
+        getCurrencySymbol() {
+            const symbols = {
+                'USD': '$',
+                'EUR': '€',
+                'GBP': '£',
+                'CAD': 'C$',
+                'AUD': 'A$'
+            };
+            return symbols[this.form.currency] || this.form.currency;
+        },
+        
+        async submitForm() {
+            this.isSubmitting = true;
+            this.errors = {};
+            
+            try {
+                const expenseData = {
+                    title: this.form.title,
+                    description: this.form.description,
+                    amount: parseFloat(this.form.amount),
+                    currency: this.form.currency,
+                    expense_date: this.form.expense_date,
+                    split_method: this.form.split_method,
+                    split_data: this.form.split_data,
+                    tags: this.form.tags
+                };
+                
+                if (this.form.category_id) {
+                    expenseData.category_id = this.form.category_id;
+                }
+                
+                const response = await fetch(`/api/expenses/${window.expenseEditData.expense.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + AuthUtils.getAccessToken()
+                    },
+                    body: JSON.stringify(expenseData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Success - redirect to expense details
+                    window.location.href = `/expenses/${window.expenseEditData.expense.id}?updated=1`;
+                } else {
+                    // Handle validation errors
+                    if (data.detail && typeof data.detail === 'object') {
+                        this.errors = data.detail;
+                    } else {
+                        this.errors.general = data.detail || 'Failed to update expense';
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating expense:', error);
+                this.errors.general = 'Network error. Please try again.';
+            } finally {
+                this.isSubmitting = false;
+            }
+        }
+    }
+}
+</script>
+{% endblock %} 

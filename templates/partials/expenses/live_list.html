@@ -1,7 +1,5 @@
 <!-- Live Expenses List Partial with Real-time Updates -->
 <div 
-    x-data="liveExpensesList()" 
-    x-init="init()"
     class="relative"
 >
     <!-- Live Status Indicator -->
@@ -20,7 +18,7 @@
             
             <!-- Live indicator -->
             <div 
-                x-show="isConnected" 
+                x-show="isLive" 
                 class="flex items-center space-x-1 text-green-600"
                 x-transition
             >
@@ -31,7 +29,7 @@
             <!-- Manual refresh button -->
             <button 
                 @click="manualRefresh()"
-                :class="isLoading ? 'animate-spin' : ''"
+                :class="isRefreshing ? 'animate-spin' : ''"
                 class="p-1 text-gray-400 hover:text-gray-600 rounded"
                 title="Refresh expenses"
             >
@@ -44,31 +42,31 @@
 
     <!-- Live Stats Summary -->
     <div 
-        x-show="showStats" 
+        x-show="showLiveStats" 
         x-transition
         class="mb-4 grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg"
     >
         <div class="text-center">
-            <div class="text-2xl font-bold text-gray-900" x-text="stats.total_expenses || 0"></div>
+            <div class="text-2xl font-bold text-gray-900" x-text="liveStats.total_expenses || 0"></div>
             <div class="text-sm text-gray-500">Total Expenses</div>
         </div>
         <div class="text-center">
-            <div class="text-2xl font-bold text-green-600" x-text="formatCurrency(stats.total_amount || 0)"></div>
+            <div class="text-2xl font-bold text-green-600" x-text="formatCurrency(liveStats.total_amount || 0)"></div>
             <div class="text-sm text-gray-500">Total Amount</div>
         </div>
         <div class="text-center">
-            <div class="text-2xl font-bold text-yellow-600" x-text="stats.pending_count || 0"></div>
+            <div class="text-2xl font-bold text-yellow-600" x-text="liveStats.pending_count || 0"></div>
             <div class="text-sm text-gray-500">Pending</div>
         </div>
         <div class="text-center">
-            <div class="text-2xl font-bold text-red-600" x-text="stats.unpaid_count || 0"></div>
+            <div class="text-2xl font-bold text-red-600" x-text="liveStats.unpaid_count || 0"></div>
             <div class="text-sm text-gray-500">Unpaid</div>
         </div>
     </div>
 
     <!-- Loading Overlay -->
     <div 
-        x-show="isLoading" 
+        x-show="isRefreshing" 
         x-transition:enter="transition ease-out duration-200"
         x-transition:enter-start="opacity-0"
         x-transition:enter-end="opacity-100"
@@ -172,12 +170,12 @@
                                     >
                                         View Details
                                     </button>
-                                    <button 
-                                        @click="editExpense('{{ expense.id }}')"
+                                    <a 
+                                        href="/expenses/{{ expense.id }}/edit"
                                         class="text-gray-600 hover:text-gray-500 text-sm font-medium"
                                     >
                                         Edit
-                                    </button>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -307,12 +305,12 @@
                                                 >
                                                     View
                                                 </button>
-                                                <button 
-                                                    @click="editExpense('{{ expense.id }}')"
-                                                    class="text-gray-600 hover:text-gray-900"
-                                                >
-                                                    Edit
-                                                </button>
+                                                <a 
+                                                href="/expenses/{{ expense.id }}/edit"
+                                                class="text-gray-600 hover:text-gray-500 text-sm font-medium"
+                                            >
+                                                Edit
+                                            </a>
                                             </div>
                                         </td>
                                     </tr>
@@ -342,206 +340,4 @@
     {% endif %}
 </div>
 
-<script>
-function liveExpensesList() {
-    return {
-        isConnected: false,
-        isLoading: false,
-        autoRefresh: true,
-        refreshInterval: null,
-        showStats: true,
-        stats: {
-            total_expenses: 0,
-            total_amount: 0,
-            pending_count: 0,
-            unpaid_count: 0
-        },
-        lastUpdate: null,
-
-        init() {
-            this.isConnected = true;
-            this.loadStats();
-            
-            if (this.autoRefresh) {
-                this.startAutoRefresh();
-            }
-
-            // Listen for live events
-            this.setupEventListeners();
-        },
-
-        toggleAutoRefresh() {
-            if (this.autoRefresh) {
-                this.startAutoRefresh();
-            } else {
-                this.stopAutoRefresh();
-            }
-        },
-
-        startAutoRefresh() {
-            this.stopAutoRefresh(); // Clear any existing interval
-            this.refreshInterval = setInterval(() => {
-                this.loadStats();
-                this.checkForUpdates();
-            }, 30000); // Refresh every 30 seconds
-        },
-
-        stopAutoRefresh() {
-            if (this.refreshInterval) {
-                clearInterval(this.refreshInterval);
-                this.refreshInterval = null;
-            }
-        },
-
-        async manualRefresh() {
-            this.isLoading = true;
-            try {
-                await this.loadStats();
-                // Trigger list refresh
-                htmx.trigger(document.body, 'applyFilters');
-                this.showToast('Expenses refreshed successfully', 'success');
-            } catch (error) {
-                console.error('Refresh failed:', error);
-                this.showToast('Failed to refresh expenses', 'error');
-            } finally {
-                this.isLoading = false;
-            }
-        },
-
-        async loadStats() {
-            try {
-                const householdParam = '{{ household_id }}' ? `?household_id={{ household_id }}` : '';
-                const response = await fetch(`/api/live/stats${householdParam}`);
-                if (response.ok) {
-                    this.stats = await response.json();
-                }
-            } catch (error) {
-                console.error('Failed to load stats:', error);
-            }
-        },
-
-        async checkForUpdates() {
-            try {
-                const response = await fetch('/api/live/trigger-update', { 
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ component: 'expenses' })
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.has_updates) {
-                        this.highlightUpdatedExpenses(data.updated_expenses || []);
-                        this.lastUpdate = new Date();
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to check for updates:', error);
-            }
-        },
-
-        highlightUpdatedExpenses(updatedExpenseIds) {
-            updatedExpenseIds.forEach(expenseId => {
-                const element = document.querySelector(`[data-expense-id="${expenseId}"]`);
-                if (element && element.__x) {
-                    element.__x.$data.isUpdated = true;
-                    
-                    // Remove highlight after 5 seconds
-                    setTimeout(() => {
-                        if (element.__x) {
-                            element.__x.$data.isUpdated = false;
-                        }
-                    }, 5000);
-                }
-            });
-        },
-
-        setupEventListeners() {
-            // Listen for expense events
-            document.addEventListener('expenseCreated', (event) => {
-                this.highlightNewExpense(event.detail.expense_id);
-                this.loadStats();
-                this.showToast('New expense added', 'success');
-            });
-
-            document.addEventListener('expenseUpdated', (event) => {
-                this.highlightUpdatedExpenses([event.detail.expense_id]);
-                this.loadStats();
-                this.showToast('Expense updated', 'info');
-            });
-
-            document.addEventListener('expenseDeleted', (event) => {
-                this.loadStats();
-                this.showToast('Expense deleted', 'success');
-            });
-        },
-
-        highlightNewExpense(expenseId) {
-            const element = document.querySelector(`[data-expense-id="${expenseId}"]`);
-            if (element && element.__x) {
-                element.__x.$data.isNew = true;
-                
-                // Remove highlight after 10 seconds
-                setTimeout(() => {
-                    if (element.__x) {
-                        element.__x.$data.isNew = false;
-                    }
-                }, 10000);
-            }
-        },
-
-        viewExpenseDetails(expenseId) {
-            // TODO: Implement expense details modal
-            console.log('Viewing expense details for:', expenseId);
-            this.showToast(`Viewing details for expense ${expenseId}`, 'info');
-        },
-
-        editExpense(expenseId) {
-            // TODO: Implement expense edit modal
-            console.log('Editing expense:', expenseId);
-            this.showToast(`Editing expense ${expenseId}`, 'info');
-        },
-
-        formatCurrency(amount) {
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: 'USD'
-            }).format(amount);
-        },
-
-        showToast(message, type = 'info') {
-            // Use our live notification service
-            fetch('/api/live/toast', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message, type })
-            }).catch(error => {
-                console.error('Failed to show toast:', error);
-                // Fallback to simple notification
-                this.showSimpleNotification(message, type);
-            });
-        },
-
-        showSimpleNotification(message, type) {
-            const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 px-4 py-2 rounded-md shadow-lg z-50 ${
-                type === 'success' ? 'bg-green-500 text-white' :
-                type === 'error' ? 'bg-red-500 text-white' :
-                type === 'warning' ? 'bg-yellow-500 text-white' :
-                'bg-blue-500 text-white'
-            }`;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
-        },
-
-        // Cleanup on destroy
-        destroy() {
-            this.stopAutoRefresh();
-        }
-    }
-}
-</script> 
+<!-- Note: This partial relies on the parent component's Alpine.js context (expensesList function) --> 
