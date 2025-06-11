@@ -43,15 +43,30 @@ A modern, modular household expense tracking application built with FastAPI, HTM
    # Edit .env with your configuration
    ```
 
-4. **Run the application**
+4. **Run the backend**
    
-   **Option 1: Using the development script (recommended)**
+   **Option 1: Using the launcher scripts (recommended)**
    ```bash
+   # Linux/macOS (Shell script)
+   ./run_backend.sh
+   
+   # Cross-platform (Python script)
+   python run_backend.py
+   
+   # Windows (Batch file)
+   run_backend.bat
+   ```
+   
+   **Option 2: Manual backend execution**
+   ```bash
+   # Change to backend directory and run
+   cd Backend
    uv run python run_server.py
    ```
    
-   **Option 2: Using uvicorn directly**
+   **Option 3: Using uvicorn directly**
    ```bash
+   cd Backend
    uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
    ```
 
